@@ -1,0 +1,8 @@
+legend span {
+    font-style: italic;
+}
+
+h1 a, a:hover {
+    color: #333333;
+    text-decoration: none;
+}
