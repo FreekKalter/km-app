@@ -1,0 +1,3 @@
+[submodule "vagrant-postgresql"]
+	path = vagrant-postgresql
+	url = https://github.com/scottmuc/vagrant-postgresql.git
