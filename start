@@ -5,7 +5,10 @@ DATADIR=/var/lib/postgresql/$VERSION/main
 BINDIR=/usr/lib/postgresql/$VERSION/bin
 CONFDIR=/etc/postgresql/$VERSION/main
 
-su postgres sh -c "$BINDIR/postgres --single -D $DATADIR -c config_file=/etc/postgresql/9.2/main/postgresql.conf" <<< "CREATE USER docker WITH PASSWORD 'docker';"
-su postgres sh -c "$BINDIR/postgres --single -D $DATADIR -c config_file=/etc/postgresql/9.2/main/postgresql.conf" <<< "CREATE DATABASE km WITH OWNER=docker;"
+echo 'host all all 0.0.0.0/0 md5' >> $CONFDIR/pg_hba.conf
+su postgres sh -c "$BINDIR/postgres --single -D $DATADIR -c config_file=$CONFDIR/postgresql.conf" <<< "CREATE USER docker WITH PASSWORD 'docker';"
+su postgres sh -c "$BINDIR/postgres --single -D $DATADIR -c config_file=$CONFDIR/postgresql.conf" <<< "CREATE DATABASE km WITH OWNER=docker;"
 
-su postgres sh -c "$BINDIR/postgres -D $DATADIR -c config_file=$CONFDIR/postgresql.conf -c listen_addresses=*"
+#su postgres sh -c "$BINDIR/postgres -D $DATADIR -c config_file=$CONFDIR/postgresql.conf -c listen_addresses=*"
+
+/usr/bin/supervisord
