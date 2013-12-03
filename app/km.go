@@ -61,13 +61,21 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
                                 from km ) kmi
                             on km.date = kmi.date
                             limit 1;`).Scan(&id, &begin, &arnhem, &laatste, &terugkomst)
-		if err != nil {
+		switch {
+		case err == sql.ErrNoRows:
+			state.Begin = Field{0, true}
+			state.Arnhem = Field{0, true}
+			state.Laatste = Field{0, true}
+			state.Terugkomst = Field{0, true}
+		case err != nil:
 			slog.Fatal(err)
+
+		default:
+			state.Begin = Field{terugkomst, true}
+			state.Arnhem = Field{int(terugkomst / 1000), true} // first 3 digits of last km
+			state.Laatste = Field{int(terugkomst / 1000), true}
+			state.Terugkomst = Field{int(terugkomst / 1000), true}
 		}
-		state.Begin = Field{terugkomst, true}
-		state.Arnhem = Field{int(terugkomst / 1000), true} // first 3 digits of last km
-		state.Laatste = Field{int(terugkomst / 1000), true}
-		state.Terugkomst = Field{int(terugkomst / 1000), true}
 
 	case err != nil:
 		if err != nil {
@@ -167,14 +175,14 @@ func init() {
 	var err error
 	//logFile, err := os.Create("/log/km.log")
 	logFile, err := os.OpenFile("/log/km.log", syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
-	slog = log.New(logFile, "pauzer: ", log.LstdFlags)
+	slog = log.New(logFile, "km: ", log.LstdFlags)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	db, err = sql.Open("postgres", "user=docker dbname=postgres password=docker sslmode=disable")
+	db, err = sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
 	if err != nil {
-		slog.Fatal(err)
+		slog.Fatal("dberror: ", err)
 	}
 }
 
@@ -191,5 +199,6 @@ func main() {
 
 	http.Handle("/", r)
 	slog.Println("started...")
+
 	http.ListenAndServe(":4001", r)
 }
