@@ -1,3 +1,5 @@
 app/km
 log
 postgresdata
+*.pyc
+.cidfile
