@@ -1,0 +1,63 @@
+<a href="#/overview">overview</a>
+<!--<div class="row-fluid" ng-controller="kmInput">-->
+<div class="row-fluid" >
+    <h3 class="text-center">{{ form.Date }}</h3>
+    <form class="form-horizontal css-form" name="kmform" novalidate >
+        <div class="control-group">
+            <label class="control-label" for="Begin"> Begin stands 's ochtends </label>
+            <div class="controls">
+                <ng-switch on="form.Begin.Editable">
+                    <input autocomplete="off" type="number" ng-model="form.Begin.Value" id="Begin" name="Begin" ng-switch-when="true" onfocus="this.value=this.value" ng-enter="save('Begin', form.Begin.Value)" integer />
+                    <input type="number" ng-model="form.Begin.Value" id="BeginNonEdit" ng-switch-when="false" disabled>
+                </ng-switch>
+                <ng-switch on="form.Begin.Editable">
+                    <button class="btn btn-small" ng-click="save('Begin', form.Begin.Value)" ng-switch-when="true" ng-disabled="kmform.Begin.$error.integer">Save</button>
+                    <button class="btn btn-small btn-inverse" ng-click="edit('Begin')" ng-switch-when="false">Edit</button>
+                </ng-switch>
+                {{count}}
+            </div>
+        </div><!--control-group -->
+
+        <div class="control-group">
+            <label class="control-label" for="Arnhem"> Aankomst Arnhem</label>
+            <div class="controls">
+                <ng-switch on="form.Arnhem.Editable">
+                    <input autocomplete="off" type="number" ng-model="form.Arnhem.Value" id="Arnhem" name="Arnhem" ng-switch-when="true" ng-enter="save('Arnhem', form.Arnhem.Value)" integer />
+                    <input type="number" ng-model="form.Arnhem.Value" id="Arnhem" ng-switch-when="false" disabled>
+                </ng-switch>
+                <ng-switch on="form.Arnhem.Editable">
+                    <button class="btn btn-small" ng-click="save('Arnhem', form.Arnhem.Value)" ng-switch-when="true" ng-disabled="kmform.Arnhem.$error.integer">Save</button>
+                    <button class="btn btn-small btn-inverse" ng-click="edit('Arnhem')" ng-switch-when="false">Edit</button>
+                </ng-switch>
+            </div>
+        </div><!--control-group -->
+
+        <div class="control-group">
+            <label class="control-label" for="Laatste"> Laatste stop</label>
+            <div class="controls">
+                <ng-switch on="form.Laatste.Editable">
+                    <input autocomplete="off" type="number" ng-model="form.Laatste.Value" id="Laatste" name="Laatste" ng-switch-when="true" ng-enter="save('Laatste', form.Laatste.Value)" integer>
+                    <input type="number" ng-model="form.Laatste.Value" id="Laatste" ng-switch-when="false" disabled>
+                </ng-switch>
+                <ng-switch on="form.Laatste.Editable">
+                    <button class="btn btn-small" ng-click="save('Laatste', form.Laatste.Value)" ng-switch-when="true" ng-disabled="kmform.Laatste.$error.integer">Save</button>
+                    <button class="btn btn-small btn-inverse" ng-click="edit('Laatste')" ng-switch-when="false">Edit</button>
+                </ng-switch>
+            </div>
+        </div><!--control-group -->
+
+        <div class="control-group">
+            <label class="control-label" for="Terugkomst"> Terugkomst</label>
+            <div class="controls">
+                <ng-switch on="form.Terugkomst.Editable">
+                    <input autocomplete="off" type="number" ng-model="form.Terugkomst.Value" id="Terugkomst" name="Terugkomst" ng-switch-when="true" ng-enter="save('Terugkomst', form.Terugkomst.Value)" integer>
+                    <input type="number" ng-model="form.Terugkomst.Value" id="Terugkomst" ng-switch-when="false" disabled>
+                </ng-switch>
+                <ng-switch on="form.Terugkomst.Editable">
+                    <button class="btn btn-small btn-primary" ng-click="save('Terugkomst', form.Terugkomst.Value)" ng-switch-when="true" ng-disabled="kmform.Terugkomst.$error.integer">Save</button>
+                    <button class="btn btn-small btn-inverse" ng-click="edit('Terugkomst')" ng-switch-when="false">Edit</button>
+                </ng-switch>
+            </div>
+        </div><!--control-group -->
+    </form>
+</div> <!-- row -->

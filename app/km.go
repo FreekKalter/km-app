@@ -117,6 +117,31 @@ func allowedMethod(method string) bool {
 	}
 	return false
 }
+func overviewHandler(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query(`select date, begin, arnhem, laatste, terugkomst from km`)
+	if err != nil {
+		slog.Fatal(err)
+	}
+	var (
+		begin, arnhem, laatste, terugkomst int
+		date                               time.Time
+	)
+	type Day struct {
+		Date                               time.Time
+		Begin, Arnhem, Laatste, Terugkomst int
+	}
+	var days []Day
+	for rows.Next() {
+		slog.Println("processing row")
+		if err := rows.Scan(&date, &begin, &arnhem, &laatste, &terugkomst); err != nil {
+			slog.Fatal(err)
+		}
+		days = append(days, Day{date, begin, arnhem, laatste, terugkomst})
+		slog.Println(days)
+	}
+	jsonEncoder := json.NewEncoder(w)
+	jsonEncoder.Encode(days)
+}
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
@@ -191,11 +216,13 @@ func main() {
 	r.HandleFunc("/", homeHandler)
 	r.HandleFunc("/state", stateHandler)
 	r.HandleFunc("/save", saveHandler).Methods("POST")
+	r.HandleFunc("/overview", overviewHandler).Methods("GET")
 
 	// static files get served directly
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
 	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.Dir("img/"))))
 	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("css/"))))
+	r.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", http.FileServer(http.Dir("partials/"))))
 
 	http.Handle("/", r)
 	slog.Println("started...")

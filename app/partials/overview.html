@@ -1,0 +1,21 @@
+<table class="table table-striped table-hover">
+
+    <thead>
+        <tr>
+            <th>date</th>
+            <th>begin</th>
+            <th>arnhem</th>
+            <th>laatste</th>
+            <th>terugkomst</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr ng-repeat="day in days">
+            <td>{{day.Date}}</td>
+            <td>{{day.Begin}}</td>
+            <td>{{day.Arnhem}}</td>
+            <td>{{day.Laatste}}</td>
+            <td>{{day.Terugkomst}}</td>
+        </tr>
+    </tbody>
+</table>

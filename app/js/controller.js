@@ -1,9 +1,9 @@
 'use strict';
-var km = angular.module('km', []);
+var kmControllers = angular.module('kmControllers', []);
 
-km.controller('KmCtrl', function($scope, $http){
+kmControllers.controller('kmInput', function($scope, $location, $http){
     $http.get('state').success(function(data){
-        $scope.form = data
+        $scope.form = data;
         var toFocus;
         if (data.Begin.Editable == true){
             toFocus = 'Begin';
@@ -13,8 +13,12 @@ km.controller('KmCtrl', function($scope, $http){
             toFocus = 'Laatste';
         }else if(data.Terugkomst.Editable == true){
             toFocus = 'Terugkomst';
+        }else{
+            $location.path("/overview")
         }
-        setTimeout(function(){ setFocus(document.getElementById(toFocus)) }, 100);
+        if(toFocus !== undefined){
+            setTimeout(function(){ setFocus(document.getElementById(toFocus)) }, 100);
+        }
     });
 
 
@@ -34,8 +38,15 @@ km.controller('KmCtrl', function($scope, $http){
     }
 });
 
+kmControllers.controller('kmOverviewController', function($scope, $http){
+    //$scope.days = [{ date: "12-05-2013", begin: 1234, arnhem: 2345, laatste: 3456, terugkomst:4567 }];
+    $http.get('overview').success(function(data){
+        $scope.days = data;
+    });
+});
+
 var INTEGER_REGEXP = /^\-?\d*$/;
-km.directive('integer', function() {
+kmApp.directive('integer', function() {
     return {
         require: 'ngModel',
         link: function(scope, elm, attrs, ctrl) {
@@ -47,19 +58,19 @@ km.directive('integer', function() {
                         return viewValue;
                     }
                     if(attrs.id == 'Arnhem'){
-                        if(viewValue > scope.form.Begin.Value){
+                        if(viewValue >= scope.form.Begin.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id == 'Laatste'){
-                        if(viewValue > scope.form.Arnhem.Value){
+                        if(viewValue >= scope.form.Arnhem.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id == 'Terugkomst'){
-                        if(viewValue > scope.form.Arnhem.Value){
+                        if(viewValue >= scope.form.Arnhem.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
@@ -74,7 +85,7 @@ km.directive('integer', function() {
     };
 });
 
-km.directive('ngEnter', function () {
+kmApp.directive('ngEnter', function () {
     return function (scope, element, attrs) {
         element.bind("keydown keypress", function (event) {
             if(event.which === 13) {
