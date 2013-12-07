@@ -9,5 +9,5 @@ test-run: app/km
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
 								   -v /home/fkalter/github/km/app:/app:rw\
 								   -v /home/fkalter/github/km/log:/log:rw\
-								   -d -p 4001:4001\
+								   -d -p 4001:4001 -p 5432:5432\
 								   freekkalter/postgres-supervisord:km /usr/bin/supervisord
