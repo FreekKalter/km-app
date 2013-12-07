@@ -23,8 +23,13 @@ kmControllers.controller('kmInput', function($scope, $location, $http){
 
 
     $scope.save = function(name, fieldValue){
-        $http.post('/save', {name: name, value: fieldValue});
-        eval('$scope.form.'+name+'.Editable=false')
+        $http.post('/save', {name: name, value: fieldValue}).success(function(data){
+            if(name == 'Terugkomst'){
+                $location.path('/overview');
+            }else{
+                eval('$scope.form.'+name+'.Editable=false')
+            }
+        });
     };
 
     $scope.edit = function(name){
