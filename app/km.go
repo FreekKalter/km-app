@@ -127,7 +127,7 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		date                               time.Time
 	)
 	type Day struct {
-		Date                               time.Time
+		Date                               string
 		Begin, Arnhem, Laatste, Terugkomst int
 	}
 	var days []Day
@@ -136,7 +136,8 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&date, &begin, &arnhem, &laatste, &terugkomst); err != nil {
 			slog.Fatal(err)
 		}
-		days = append(days, Day{date, begin, arnhem, laatste, terugkomst})
+		datestring := date.Format("02-01-2006")
+		days = append(days, Day{datestring, begin, arnhem, laatste, terugkomst})
 		slog.Println(days)
 	}
 	jsonEncoder := json.NewEncoder(w)
