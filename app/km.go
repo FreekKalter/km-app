@@ -32,7 +32,7 @@ type Kilometers struct {
 	Comment                       string
 }
 
-func (k Kilometers) getMax() int {
+func (k *Kilometers) getMax() int {
 	if k.Terug > 0 {
 		return k.Terug
 	}
@@ -52,7 +52,6 @@ func (k *Kilometers) addPost(pv PostValue) {
 	switch pv.Name {
 	case "begin":
 		k.Begin = pv.Value
-		slog.Println("updating postdata in today")
 	case "eerste":
 		k.Eerste = pv.Value
 	case "laatste":
@@ -60,6 +59,53 @@ func (k *Kilometers) addPost(pv PostValue) {
 	case "terug":
 		k.Terug = pv.Value
 	}
+}
+
+func (k *Kilometers) PostInsert(s gorp.SqlExecutor) error {
+
+	return nil
+}
+
+func (k *Kilometers) PostUpdate(s gorp.SqlExecutor) error {
+	return nil
+}
+
+func timeStamp(action string) {
+	id, err := dbmap.SelectInt("select Id from times where date=$1", getDateStr())
+	if err != nil {
+		slog.Fatal(err)
+	}
+	today := new(Times)
+	now := time.Now().Unix()
+	if id == 0 { // no times saved for today
+		today.Date = time.Now()
+		switch action {
+		case "in":
+			today.CheckIn = now
+		case "out":
+			today.CheckOut = now
+		}
+		dbmap.Insert(today)
+	} else {
+		err = dbmap.SelectOne(today, "select * from times where id=$1", id)
+		if err != nil {
+			slog.Fatal(err)
+		}
+		switch action {
+		case "in":
+			today.CheckIn = now
+		case "out":
+			today.CheckOut = now
+		}
+		dbmap.Update(today)
+	}
+}
+
+type Times struct {
+	Id       int64
+	Date     time.Time
+	CheckIn  int64
+	CheckOut int64
 }
 
 var dbmap *gorp.DbMap
@@ -74,7 +120,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func stateHandler(w http.ResponseWriter, r *http.Request) {
-	now := time.Now()
+	now := time.Now().UTC()
 	dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
 	type Field struct {
 		Value    int
@@ -159,12 +205,10 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(all)
-	// TODO
-	//datestring := date.Format("02-01-2006")
 }
 
 func getDateStr() string {
-	now := time.Now()
+	now := time.Now().UTC()
 	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
 
 }
@@ -187,13 +231,18 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		pv.Name = strings.ToLower(pv.Name)
 	}
+	if pv.Name == "eerste" {
+		go timeStamp("in")
+	} else if pv.Name == "laatste" {
+		go timeStamp("out")
+	}
 
 	dateStr := getDateStr()
 	id, err := dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
 
 	today := new(Kilometers)
 	if id == 0 { // nothing saved for today, save posted data and date
-		today.Date = time.Now()
+		today.Date = time.Now().UTC()
 		today.addPost(pv)
 		slog.Println(today)
 		err = dbmap.Insert(today)
@@ -220,7 +269,6 @@ func init() {
 	os.Chdir("/app")
 	// Set up logging
 	var err error
-	//logFile, err := os.Create("/log/km.log")
 	logFile, err := os.OpenFile("/log/km.log", syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
 	slog = log.New(logFile, "km: ", log.LstdFlags)
 	if err != nil {
@@ -233,10 +281,9 @@ func init() {
 	}
 	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
 	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
+	dbmap.AddTable(Times{}).SetKeys(true, "Id")
 
 	dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
-
-	//hd, err = hood.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
 }
 
 func main() {
