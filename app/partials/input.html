@@ -19,15 +19,15 @@
         </div><!--control-group -->
 
         <div class="control-group">
-            <label class="control-label" for="Arnhem"> Aankomst Arnhem</label>
+            <label class="control-label" for="Eerste">Eerste stop</label>
             <div class="controls">
-                <ng-switch on="form.Arnhem.Editable">
-                    <input autocomplete="off" type="number" ng-model="form.Arnhem.Value" id="Arnhem" name="Arnhem" ng-switch-when="true" ng-enter="save('Arnhem', form.Arnhem.Value)" integer />
-                    <input type="number" ng-model="form.Arnhem.Value" id="Arnhem" ng-switch-when="false" disabled>
+                <ng-switch on="form.Eerste.Editable">
+                    <input autocomplete="off" type="number" ng-model="form.Eerste.Value" id="Eerste" name="Eerste" ng-switch-when="true" ng-enter="save('Eerste', form.Eerste.Value)" integer />
+                    <input type="number" ng-model="form.Eerste.Value" id="Eerste" ng-switch-when="false" disabled>
                 </ng-switch>
-                <ng-switch on="form.Arnhem.Editable">
-                    <button class="btn btn-small" ng-click="save('Arnhem', form.Arnhem.Value)" ng-switch-when="true" ng-disabled="kmform.Arnhem.$error.integer">Save</button>
-                    <button class="btn btn-small btn-inverse" ng-click="edit('Arnhem')" ng-switch-when="false">Edit</button>
+                <ng-switch on="form.Eerste.Editable">
+                    <button class="btn btn-small" ng-click="save('Eerste', form.Eerste.Value)" ng-switch-when="true" ng-disabled="kmform.Eerste.$error.integer">Save</button>
+                    <button class="btn btn-small btn-inverse" ng-click="edit('Eerste')" ng-switch-when="false">Edit</button>
                 </ng-switch>
             </div>
         </div><!--control-group -->
@@ -47,15 +47,15 @@
         </div><!--control-group -->
 
         <div class="control-group">
-            <label class="control-label" for="Terugkomst"> Terugkomst</label>
+            <label class="control-label" for="Terug"> Terug</label>
             <div class="controls">
-                <ng-switch on="form.Terugkomst.Editable">
-                    <input autocomplete="off" type="number" ng-model="form.Terugkomst.Value" id="Terugkomst" name="Terugkomst" ng-switch-when="true" ng-enter="save('Terugkomst', form.Terugkomst.Value)" integer>
-                    <input type="number" ng-model="form.Terugkomst.Value" id="Terugkomst" ng-switch-when="false" disabled>
+                <ng-switch on="form.Terug.Editable">
+                    <input autocomplete="off" type="number" ng-model="form.Terug.Value" id="Terug" name="Terug" ng-switch-when="true" ng-enter="save('Terug', form.Terug.Value)" integer>
+                    <input type="number" ng-model="form.Terug.Value" id="Terug" ng-switch-when="false" disabled>
                 </ng-switch>
-                <ng-switch on="form.Terugkomst.Editable">
-                    <button class="btn btn-small btn-primary" ng-click="save('Terugkomst', form.Terugkomst.Value)" ng-switch-when="true" ng-disabled="kmform.Terugkomst.$error.integer">Save</button>
-                    <button class="btn btn-small btn-inverse" ng-click="edit('Terugkomst')" ng-switch-when="false">Edit</button>
+                <ng-switch on="form.Terug.Editable">
+                    <button class="btn btn-small btn-primary" ng-click="save('Terug', form.Terug.Value)" ng-switch-when="true" ng-disabled="kmform.Terug.$error.integer">Save</button>
+                    <button class="btn btn-small btn-inverse" ng-click="edit('Terug')" ng-switch-when="false">Edit</button>
                 </ng-switch>
             </div>
         </div><!--control-group -->

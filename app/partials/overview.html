@@ -11,11 +11,11 @@
     </thead>
     <tbody>
         <tr ng-repeat="day in days">
-            <td>{{day.Date}}</td>
+            <td>{{day.Date |date:'EEE dd-MM-yyyy'}}</td>
             <td>{{day.Begin}}</td>
-            <td>{{day.Arnhem}}</td>
+            <td>{{day.Eerste}}</td>
             <td>{{day.Laatste}}</td>
-            <td>{{day.Terugkomst}}</td>
+            <td>{{day.Terug}}</td>
         </tr>
     </tbody>
 </table>

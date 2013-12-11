@@ -3,16 +3,19 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+	"time"
+
 	"syscall"
 
 	"net/http"
-	"time"
 
+	"github.com/coopernurse/gorp"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -22,7 +25,44 @@ type PostValue struct {
 	Value int
 }
 
-var db *sql.DB
+type Kilometers struct {
+	Id                            int64
+	Date                          time.Time
+	Begin, Eerste, Laatste, Terug int
+	Comment                       string
+}
+
+func (k Kilometers) getMax() int {
+	if k.Terug > 0 {
+		return k.Terug
+	}
+	if k.Laatste > 0 {
+		return k.Laatste
+	}
+	if k.Eerste > 0 {
+		return k.Eerste
+	}
+	if k.Begin > 0 {
+		return k.Begin
+	}
+	return 0
+}
+
+func (k *Kilometers) addPost(pv PostValue) {
+	switch pv.Name {
+	case "begin":
+		k.Begin = pv.Value
+		slog.Println("updating postdata in today")
+	case "eerste":
+		k.Eerste = pv.Value
+	case "laatste":
+		k.Laatste = pv.Value
+	case "terug":
+		k.Terug = pv.Value
+	}
+}
+
+var dbmap *gorp.DbMap
 var slog *log.Logger
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,72 +76,63 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func stateHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
-	var (
-		id, begin, arnhem, laatste, terugkomst int
-	)
-
 	type Field struct {
 		Value    int
 		Editable bool
 	}
 	type State struct {
-		Date                               string
-		Begin, Arnhem, Laatste, Terugkomst Field
+		Date                          string
+		Begin, Eerste, Laatste, Terug Field
 	}
 	var state State
 	state.Date = dateStr
 
-	err := db.QueryRow("SELECT id,begin,arnhem,laatste,terugkomst FROM km WHERE date=$1", dateStr).Scan(&id, &begin, &arnhem, &laatste, &terugkomst)
+	// Get data save for this day
+	var today Kilometers
+	err := dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
 	switch {
-	case err == sql.ErrNoRows: // new row
-		err := db.QueryRow(`select id, begin, arnhem,laatste, terugkomst
-                            from km
-                            inner join(
-                                select max(date) date
-                                from km ) kmi
-                            on km.date = kmi.date
-                            limit 1;`).Scan(&id, &begin, &arnhem, &laatste, &terugkomst)
-		switch {
-		case err == sql.ErrNoRows:
-			state.Begin = Field{0, true}
-			state.Arnhem = Field{0, true}
-			state.Laatste = Field{0, true}
-			state.Terugkomst = Field{0, true}
-		case err != nil:
-			slog.Fatal(err)
-
-		default:
-			state.Begin = Field{terugkomst, true}
-			state.Arnhem = Field{int(terugkomst / 1000), true} // first 3 digits of last km
-			state.Laatste = Field{int(terugkomst / 1000), true}
-			state.Terugkomst = Field{int(terugkomst / 1000), true}
-		}
-
 	case err != nil:
 		if err != nil {
 			slog.Fatal(err)
 		}
+	case today == (Kilometers{}): // today not saved yet TODO: check this
+		slog.Println("no today")
+		var lastDay Kilometers
+		err := dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
+		if err != nil {
+			slog.Fatal(err)
+		}
+		if lastDay == (Kilometers{}) { // Nothing in db yet
+
+		}
+		state.Begin = Field{lastDay.getMax(), true}
+		state.Eerste = Field{0, true}
+		state.Laatste = Field{0, true}
+		state.Terug = Field{0, true}
 	default: // Something is already filled in for today
-		if begin != 0 {
-			state.Begin.Value = begin
-		}
-		if arnhem == 0 {
-			state.Arnhem.Value = int(begin / 1000)
-			state.Arnhem.Editable = true
+		slog.Println(today)
+		if today.Begin != 0 {
+			state.Begin.Value = today.Begin
 		} else {
-			state.Arnhem.Value = arnhem
+			state.Begin.Editable = true
 		}
-		if laatste == 0 {
-			state.Laatste.Value = int(begin / 1000)
+		if today.Eerste == 0 {
+			state.Eerste.Value = int(today.Begin / 1000)
+			state.Eerste.Editable = true
+		} else {
+			state.Eerste.Value = today.Eerste
+		}
+		if today.Laatste == 0 {
+			state.Laatste.Value = int(today.Eerste / 1000)
 			state.Laatste.Editable = true
 		} else {
-			state.Laatste.Value = laatste
+			state.Laatste.Value = today.Laatste
 		}
-		if terugkomst == 0 {
-			state.Terugkomst.Value = int(begin / 1000)
-			state.Terugkomst.Editable = true
+		if today.Terug == 0 {
+			state.Terug.Value = int(today.Laatste / 1000)
+			state.Terug.Editable = true
 		} else {
-			state.Terugkomst.Value = terugkomst
+			state.Terug.Value = today.Terug
 		}
 	}
 
@@ -110,38 +141,32 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func allowedMethod(method string) bool {
-	for _, v := range []string{"Begin", "Arnhem", "Laatste", "Terugkomst"} {
+	for _, v := range []string{"Begin", "Eerste", "Laatste", "Terug"} {
 		if v == method {
 			return true
 		}
 	}
 	return false
 }
+
 func overviewHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query(`select date, begin, arnhem, laatste, terugkomst from km`)
+	slog.Println("get overview")
+	var all []Kilometers
+	_, err := dbmap.Select(&all, "select * from kilometers order by date")
 	if err != nil {
-		slog.Fatal(err)
+		slog.Fatal("overview:", err)
 	}
-	var (
-		begin, arnhem, laatste, terugkomst int
-		date                               time.Time
-	)
-	type Day struct {
-		Date                               string
-		Begin, Arnhem, Laatste, Terugkomst int
-	}
-	var days []Day
-	for rows.Next() {
-		slog.Println("processing row")
-		if err := rows.Scan(&date, &begin, &arnhem, &laatste, &terugkomst); err != nil {
-			slog.Fatal(err)
-		}
-		datestring := date.Format("02-01-2006")
-		days = append(days, Day{datestring, begin, arnhem, laatste, terugkomst})
-		slog.Println(days)
-	}
+
 	jsonEncoder := json.NewEncoder(w)
-	jsonEncoder.Encode(days)
+	jsonEncoder.Encode(all)
+	// TODO
+	//datestring := date.Format("02-01-2006")
+}
+
+func getDateStr() string {
+	now := time.Now()
+	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
+
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
@@ -163,30 +188,26 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		pv.Name = strings.ToLower(pv.Name)
 	}
 
-	var id int
-	now := time.Now()
-	dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
-	update, _ := db.Prepare(fmt.Sprintf("update km set %s=$1 where id=$2", pv.Name))
-	err = db.QueryRow("SELECT id FROM km WHERE date=$1", dateStr).Scan(&id)
-	switch {
-	case err == sql.ErrNoRows:
-		slog.Println("add")
-		var lastId int
-		err = db.QueryRow(`insert into km (begin,arnhem,laatste,terugkomst, comment, date)
-                                  values(0,0,0,0, '',$1) returning id`, dateStr).Scan(&lastId)
-		if err != nil {
-			slog.Fatal(err)
-		}
+	dateStr := getDateStr()
+	id, err := dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
 
-		_, err := update.Exec(pv.Value, lastId)
+	today := new(Kilometers)
+	if id == 0 { // nothing saved for today, save posted data and date
+		today.Date = time.Now()
+		today.addPost(pv)
+		slog.Println(today)
+		err = dbmap.Insert(today)
 		if err != nil {
 			slog.Fatal(err)
 		}
-	case err != nil:
-		slog.Fatal(err)
-	default:
-		slog.Println("update")
-		_, err := update.Exec(pv.Value, id)
+	} else { // update already partially saved day
+		err = dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
+		//today, err = dbmap.Get(Kilometers{}, id)
+		if err != nil {
+			slog.Fatal(err)
+		}
+		today.addPost(pv)
+		_, err = dbmap.Update(today)
 		if err != nil {
 			slog.Fatal(err)
 		}
@@ -206,13 +227,20 @@ func init() {
 		log.Panic(err)
 	}
 
-	db, err = sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
+	db, err := sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
 	if err != nil {
 		slog.Fatal("dberror: ", err)
 	}
+	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
+	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
+
+	dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
+
+	//hd, err = hood.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
 }
 
 func main() {
+	defer dbmap.Db.Close()
 	r := mux.NewRouter()
 	r.HandleFunc("/", homeHandler)
 	r.HandleFunc("/state", stateHandler)
