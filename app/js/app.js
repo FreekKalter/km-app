@@ -1,8 +1,8 @@
-var kmApp = angular.module('kmApp', ['ngRoute', 'kmControllers' ]);
+var kmApp = angular.module('kmApp', ['ngRoute', 'kmControllers' , 'ui.bootstrap']);
 
-kmApp.config(['$routeProvider', function($routeProvider){
+kmApp.config(['$routeProvider', function($routeProvider, $locationProvider){
     $routeProvider.
-    when('/', {
+    when('/input/:id', {
         templateUrl: 'partials/input.html',
         controller: 'kmInput'
     }).
@@ -11,6 +11,6 @@ kmApp.config(['$routeProvider', function($routeProvider){
         controller: 'kmOverviewController'
     }).
     otherwise({
-        redirectTo: '/'
+        redirectTo: '/overview'
     });
 }]);

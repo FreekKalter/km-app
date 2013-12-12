@@ -11,7 +11,8 @@
         <meta name="viewport" content="initial-scale=1.0,user-scalable=no,maximum-scale=1" media="(device-height: 568px)" />
 
 
-        <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.no-icons.min.css" rel=stylesheet>
+        <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+        <!--<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.no-icons.min.css" rel=stylesheet>-->
         <link href="css/main.css" rel="stylesheet" media="screen">
 
         <!-- Load CDN resoursces -->
@@ -19,12 +20,13 @@
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.3/angular-route.js"></script>
         <!-- Load local copys if loading from cdn fails -->
         <script type="text/javascript">window.angular || document.write('<script type="text/javascript" src="js/angular-min.js"><\/script>');</script>
+        <script src="js/bootstrap-custom/ui-bootstrap-custom-tpls-0.7.0.js"></script>
 
         <script src="js/app.js"></script>
         <script src="js/controller.js"></script>
         <!--<script src="js/filters.js"></script>-->
 
-        <script> function reloadPage(){ location.reload(); } </script>
+        <script> function reloadPage(){ window.location.href='/'; } </script>
     </head>
     <body>
         <!--[if lt IE 7]>

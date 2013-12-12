@@ -1,10 +1,9 @@
 'use strict';
 var kmControllers = angular.module('kmControllers', []);
 
-kmControllers.controller('kmInput', function($scope, $location, $http){
-
+kmControllers.controller('kmInput', function($scope,$routeParams, $location, $http){
     $scope.getState = function(){
-        $http.get('state').success(function(data){
+        $http.get('state/'+ $routeParams.id).success(function(data){
             $scope.form = data;
             var toFocus;
             if (data.Begin.Editable == true){
@@ -15,8 +14,6 @@ kmControllers.controller('kmInput', function($scope, $location, $http){
                 toFocus = 'Laatste';
             }else if(data.Terug.Editable == true){
                 toFocus = 'Terug';
-            }else{
-                $location.path("/overview")
             }
             if(toFocus !== undefined){
                 setTimeout(function(){ setFocus(document.getElementById(toFocus)) }, 100);
@@ -47,11 +44,25 @@ kmControllers.controller('kmInput', function($scope, $location, $http){
     $scope.getState();
 });
 
-kmControllers.controller('kmOverviewController', function($scope, $http){
+kmControllers.controller('kmOverviewController', function($scope, $location, $http){
     //$scope.days = [{ date: "12-05-2013", begin: 1234, arnhem: 2345, laatste: 3456, terugkomst:4567 }];
-    $http.get('overview').success(function(data){
+    $http.get('overview/kilometers').success(function(data){
         $scope.days = data;
     });
+
+    $http.get('overview/tijden').success(function(data){
+       $scope.times = data;
+    });
+
+    $scope.delete = function(index){
+        $http.get('delete/' + $scope.days[index].Id ).success(function(data){
+            $scope.days.splice(index, 1) // delete ellemnt from array (delete undefines element)
+        });
+    };
+
+    $scope.edit = function(index){
+        $location.path('/input/' + $scope.days[index].Id);
+    };
 });
 
 var INTEGER_REGEXP = /^\-?\d*$/;

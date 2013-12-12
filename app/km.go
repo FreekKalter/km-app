@@ -61,15 +61,6 @@ func (k *Kilometers) addPost(pv PostValue) {
 	}
 }
 
-func (k *Kilometers) PostInsert(s gorp.SqlExecutor) error {
-
-	return nil
-}
-
-func (k *Kilometers) PostUpdate(s gorp.SqlExecutor) error {
-	return nil
-}
-
 func timeStamp(action string) {
 	id, err := dbmap.SelectInt("select Id from times where date=$1", getDateStr())
 	if err != nil {
@@ -120,6 +111,9 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func stateHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
 	now := time.Now().UTC()
 	dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
 	type Field struct {
@@ -135,7 +129,12 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get data save for this day
 	var today Kilometers
-	err := dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
+	var err error
+	if id == "today" {
+		err = dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
+	} else {
+		err = dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
+	}
 	switch {
 	case err != nil:
 		if err != nil {
@@ -184,6 +183,7 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(state)
+
 }
 
 func allowedMethod(method string) bool {
@@ -196,21 +196,57 @@ func allowedMethod(method string) bool {
 }
 
 func overviewHandler(w http.ResponseWriter, r *http.Request) {
-	slog.Println("get overview")
-	var all []Kilometers
-	_, err := dbmap.Select(&all, "select * from kilometers order by date")
-	if err != nil {
-		slog.Fatal("overview:", err)
-	}
+	vars := mux.Vars(r)
+	category := vars["category"]
+	slog.Println("get overview:", category)
 
-	jsonEncoder := json.NewEncoder(w)
-	jsonEncoder.Encode(all)
+	switch category {
+	case "kilometers":
+		var all []Kilometers
+		_, err := dbmap.Select(&all, "select * from kilometers order by date")
+		if err != nil {
+			slog.Fatal("overview:", err)
+		}
+		jsonEncoder := json.NewEncoder(w)
+		jsonEncoder.Encode(all)
+
+	case "tijden":
+		var all []Times
+		type Column struct {
+			Date, CheckIn, CheckOut time.Time
+			Hours                   int
+		}
+		var columns []Column
+		_, err := dbmap.Select(&all, "select * from times order by date")
+		if err != nil {
+			slog.Fatal(err)
+		}
+		for _, c := range all {
+			var col Column
+			col.Date = c.Date
+			col.CheckIn = time.Unix(c.CheckIn, 0)
+			col.CheckOut = time.Unix(c.CheckOut, 0)
+			col.Hours = int((time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours())
+			columns = append(columns, col)
+		}
+		jsonEncoder := json.NewEncoder(w)
+		jsonEncoder.Encode(columns)
+	}
+}
+
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	slog.Println("delete:", id)
+	_, err := dbmap.Exec("delete from kilometers where id=$1", id)
+	if err != nil {
+		slog.Fatal(err)
+	}
 }
 
 func getDateStr() string {
 	now := time.Now().UTC()
 	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
-
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
@@ -290,9 +326,10 @@ func main() {
 	defer dbmap.Db.Close()
 	r := mux.NewRouter()
 	r.HandleFunc("/", homeHandler)
-	r.HandleFunc("/state", stateHandler)
+	r.HandleFunc("/state/{id}", stateHandler)
 	r.HandleFunc("/save", saveHandler).Methods("POST")
-	r.HandleFunc("/overview", overviewHandler).Methods("GET")
+	r.HandleFunc("/overview/{category}", overviewHandler).Methods("GET")
+	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
 
 	// static files get served directly
 	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
