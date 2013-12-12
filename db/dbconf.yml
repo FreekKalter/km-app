@@ -1,3 +1,6 @@
 development:
     driver: postgres
     open: user=docker dbname=km password=docker sslmode=disable
+production:
+    driver: postgres
+    open: user=docker dbname=km password=docker sslmode=disable
