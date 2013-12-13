@@ -91,7 +91,7 @@ kmApp.directive('integer', function() {
                         }
                     }
                     if(attrs.id == 'Laatste'){
-                        if(viewValue >= scope.form.Begin.Value){
+                        if(viewValue >= scope.form.Eerste.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
