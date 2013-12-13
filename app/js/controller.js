@@ -2,6 +2,8 @@
 var kmControllers = angular.module('kmControllers', []);
 
 kmControllers.controller('kmInput', function($scope,$routeParams, $location, $http){
+    $scope.fields = [ 'Begin', 'Eerste', 'Laatste', 'Terug' ];
+
     $scope.getState = function(){
         $http.get('state/'+ $routeParams.id).success(function(data){
             $scope.form = data;
@@ -35,6 +37,11 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     $scope.edit = function(name){
         eval('$scope.form.'+name+'.Editable=true')
     };
+
+    $scope.valid = function(name){
+        console.log($scope);
+        return $scope.kmform['{{field}}'].$error.integer;
+    }
 
     function setFocus(el){
         el.focus();
@@ -84,13 +91,13 @@ kmApp.directive('integer', function() {
                         }
                     }
                     if(attrs.id == 'Laatste'){
-                        if(viewValue >= scope.form.Eerste.Value){
+                        if(viewValue >= scope.form.Begin.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id == 'Terug'){
-                        if(viewValue >= scope.form.Eerste.Value){
+                        if(viewValue >= scope.form.Laatste.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }

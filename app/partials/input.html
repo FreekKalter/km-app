@@ -2,62 +2,24 @@
 <!--<div class="row-fluid" ng-controller="kmInput">-->
 <div class="row-fluid" >
     <h3 class="text-center">{{ form.Date }}</h3>
-    <form class="form-horizontal css-form" name="kmform" novalidate >
-        <div class="control-group">
-            <label class="control-label" for="Begin"> Begin stands 's ochtends </label>
-            <div class="controls">
-                <ng-switch on="form.Begin.Editable">
-                    <input autocomplete="off" type="number" ng-model="form.Begin.Value" id="Begin" name="Begin" ng-switch-when="true" onfocus="this.value=this.value" ng-enter="save('Begin', form.Begin.Value)" integer />
-                    <input type="number" ng-model="form.Begin.Value" id="BeginNonEdit" ng-switch-when="false" disabled>
-                </ng-switch>
-                <ng-switch on="form.Begin.Editable">
-                    <button class="btn btn-small" ng-click="save('Begin', form.Begin.Value)" ng-switch-when="true" ng-disabled="kmform.Begin.$error.integer">Save</button>
-                    <button class="btn btn-small btn-inverse" ng-click="edit('Begin')" ng-switch-when="false">Edit</button>
-                </ng-switch>
-                {{count}}
-            </div>
-        </div><!--control-group -->
 
-        <div class="control-group">
-            <label class="control-label" for="Eerste">Eerste stop</label>
-            <div class="controls">
-                <ng-switch on="form.Eerste.Editable">
-                    <input autocomplete="off" type="number" ng-model="form.Eerste.Value" id="Eerste" name="Eerste" ng-switch-when="true" ng-enter="save('Eerste', form.Eerste.Value)" integer />
-                    <input type="number" ng-model="form.Eerste.Value" id="Eerste" ng-switch-when="false" disabled>
-                </ng-switch>
-                <ng-switch on="form.Eerste.Editable">
-                    <button class="btn btn-small" ng-click="save('Eerste', form.Eerste.Value)" ng-switch-when="true" ng-disabled="kmform.Eerste.$error.integer">Save</button>
-                    <button class="btn btn-small btn-inverse" ng-click="edit('Eerste')" ng-switch-when="false">Edit</button>
-                </ng-switch>
-            </div>
-        </div><!--control-group -->
-
-        <div class="control-group">
-            <label class="control-label" for="Laatste"> Laatste stop</label>
-            <div class="controls">
-                <ng-switch on="form.Laatste.Editable">
-                    <input autocomplete="off" type="number" ng-model="form.Laatste.Value" id="Laatste" name="Laatste" ng-switch-when="true" ng-enter="save('Laatste', form.Laatste.Value)" integer>
-                    <input type="number" ng-model="form.Laatste.Value" id="Laatste" ng-switch-when="false" disabled>
-                </ng-switch>
-                <ng-switch on="form.Laatste.Editable">
-                    <button class="btn btn-small" ng-click="save('Laatste', form.Laatste.Value)" ng-switch-when="true" ng-disabled="kmform.Laatste.$error.integer">Save</button>
-                    <button class="btn btn-small btn-inverse" ng-click="edit('Laatste')" ng-switch-when="false">Edit</button>
-                </ng-switch>
-            </div>
-        </div><!--control-group -->
-
-        <div class="control-group">
-            <label class="control-label" for="Terug"> Terug</label>
-            <div class="controls">
-                <ng-switch on="form.Terug.Editable">
-                    <input autocomplete="off" type="number" ng-model="form.Terug.Value" id="Terug" name="Terug" ng-switch-when="true" ng-enter="save('Terug', form.Terug.Value)" integer>
-                    <input type="number" ng-model="form.Terug.Value" id="Terug" ng-switch-when="false" disabled>
-                </ng-switch>
-                <ng-switch on="form.Terug.Editable">
-                    <button class="btn btn-small btn-primary" ng-click="save('Terug', form.Terug.Value)" ng-switch-when="true" ng-disabled="kmform.Terug.$error.integer">Save</button>
-                    <button class="btn btn-small btn-inverse" ng-click="edit('Terug')" ng-switch-when="false">Edit</button>
-                </ng-switch>
-            </div>
-        </div><!--control-group -->
+    <form class="form-horizontal css-form" role="form" name="kmform" novalidate>
+        <div ng-repeat="field in fields">
+            <div class="form-group">
+                <label for="{{field}}" class="control-label col-sm-2">{{field}}</label>
+                <div class="col-sm-10">
+                    <ng-switch on="form[field].Editable">
+                        <input autocomplete="off" type="number" ng-model="form[field].Value" id="{{field}}" name="{{field}}"
+                               ng-switch-when="true" onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" integer />
+                        <input type="number" ng-model="form[field].Value" id="{{field}}NonEdit" ng-switch-when="false" disabled>
+                    </ng-switch>
+                    <ng-switch on="form[field].Editable">
+                        <button class="btn btn-xs" ng-click="save(field, form[field].Value)" ng-switch-when="true" ng-disabled="valid(field)">Save</button>
+                        <button class="btn btn-xs btn-inverse" ng-click="edit(field)" ng-switch-when="false">Edit</button>
+                    </ng-switch>
+                </div><!-- col-sm-10 -->
+            </div><!-- form group -->
+        </div> <!-- ng-repeat -->
     </form>
+
 </div> <!-- row -->
