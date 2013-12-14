@@ -45,10 +45,11 @@ func init() {
 }
 func main() {
 	var kms []Km
-	_, err := dbKm.Select(&kms, "select * from km")
+	_ , err := dbKm.Select(&kms, "select * from km")
 	if err != nil {
 		log.Fatal(err)
 	}
+    log.Println(kms)
 	for _, k := range kms {
 		var kilo Kilometers
 		kilo.Id = k.Id
@@ -57,6 +58,9 @@ func main() {
 		kilo.Eerste = k.Arnhem
 		kilo.Laatste = k.Laatste
 		kilo.Terug = k.Terugkomst
-		dbKilometers.Insert(kilo)
+        err := dbKilometers.Insert(&kilo)
+        if err != nil{
+            log.Fatal(err)
+        }
 	}
 }
