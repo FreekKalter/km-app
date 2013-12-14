@@ -55,3 +55,5 @@
         </table>
     </tab>
 </tabset>
+<button type="button" class="btn" ng-click="go('prev')"><span class="glyphicon glyphicon-step-backward"></span>{{prev.date | date:'MMM'}}</button>
+<button type="button" class="btn" ng-click="go('next')" ng-show="next">{{next.date | date:'MMM'}}<span class="glyphicon glyphicon-step-forward"></span></button>

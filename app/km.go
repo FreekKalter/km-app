@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"strconv"
 
 	"fmt"
 	"io/ioutil"
@@ -198,15 +199,24 @@ func allowedMethod(method string) bool {
 func overviewHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	category := vars["category"]
-	slog.Println("get overview:", category)
+	month, err := strconv.ParseInt(vars["month"], 10, 64)
+	if err != nil {
+		slog.Fatal(err)
+	}
+	year, err := strconv.ParseInt(vars["year"], 10, 64)
+	if err != nil {
+		slog.Fatal(err)
+	}
+	slog.Println("overview", year, month)
 
 	switch category {
 	case "kilometers":
-		var all []Kilometers
-		_, err := dbmap.Select(&all, "select * from kilometers order by date")
+		all := make([]Kilometers, 0)
+		_, err := dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
 			slog.Fatal("overview:", err)
 		}
+
 		jsonEncoder := json.NewEncoder(w)
 		jsonEncoder.Encode(all)
 
@@ -216,8 +226,8 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 			Date, CheckIn, CheckOut time.Time
 			Hours                   int
 		}
-		var columns []Column
-		_, err := dbmap.Select(&all, "select * from times order by date")
+		columns := make([]Column, 0)
+		_, err := dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
 			slog.Fatal(err)
 		}
@@ -328,7 +338,7 @@ func main() {
 	r.HandleFunc("/", homeHandler)
 	r.HandleFunc("/state/{id}", stateHandler)
 	r.HandleFunc("/save", saveHandler).Methods("POST")
-	r.HandleFunc("/overview/{category}", overviewHandler).Methods("GET")
+	r.HandleFunc("/overview/{category}/{year}/{month}", overviewHandler).Methods("GET")
 	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
 
 	// static files get served directly
