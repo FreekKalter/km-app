@@ -53,12 +53,16 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
 
 kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http){
     var suffix =  $routeParams.year + '/' + $routeParams.month;
+    //TODO: combine in 1 request
     $http.get('overview/kilometers/' + suffix).success(function(data){
         $scope.days = data;
     });
-    $http.get('overview/tijden/' + suffix).success(function(data){
-        $scope.times = data;
-    });
+
+    $scope.loadMe = function(){
+        $http.get('overview/tijden/' + suffix).success(function(data){
+            $scope.times = data;
+        });
+    };
 
     $scope.delete = function(index){
         $http.get('delete/' + $scope.days[index].Id ).success(function(data){
