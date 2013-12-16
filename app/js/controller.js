@@ -52,26 +52,53 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
 });
 
 kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http){
-    var suffix =  $routeParams.year + '/' + $routeParams.month;
-    //TODO: combine in 1 request
-    $http.get('overview/kilometers/' + suffix).success(function(data){
-        $scope.days = data;
-    });
 
-    $scope.loadMe = function(){
-        $http.get('overview/tijden/' + suffix).success(function(data){
-            $scope.times = data;
-        });
+    // Get tabs accesable via bookmarkeble url: bit of a hacky solution!!
+    //
+    // Load data has 2 functions
+    //
+    // 1) on initial page load it get gets called 1 time, to fetch data from backend.
+    // 2) When switching tabs loadData gets called 2 times:
+    //      - first time desired tab state does noet equal whats is currently in url
+    //         -> so change url to match desired state
+    //      - second time desired tab is also in url -> now fetch data from backend and render it
+    //          (like on an initial page load)
+    //
+    $scope.loadData = function(category){
+        var path = [ 'overview', category, $routeParams.year, $routeParams.month].join('/');
+        if(category == $routeParams.category){
+            if(category == 'kilometers'){
+                $http.get(path).success(function(data){
+                    $scope.kilometers = data;
+                });
+            }else if(category == 'tijden'){
+                $http.get(path).success(function(data){
+                    $scope.times = data;
+                });
+            }
+        }else{
+            $location.path(path);
+        }
     };
+
+    // Activate tab based on url
+    if($routeParams.category == 'kilometers'){
+        $scope.kiloActive = true;
+    }
+    if($routeParams.category == 'tijden'){
+        $scope.timesActive = true;
+    }
 
     $scope.delete = function(index){
         $http.get('delete/' + $scope.days[index].Id ).success(function(data){
             $scope.days.splice(index, 1) // delete ellemnt from array (delete undefines element)
         });
     };
+
     $scope.edit = function(index){
         $location.path('/input/' + $scope.days[index].Id);
     };
+
     $scope.go = function(path){
         if( path == 'next' ){
             $location.path($scope.next.link);
@@ -86,14 +113,14 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
         n.setMonth($routeParams.month -1 );
         n.setFullYear($routeParams.year);
         n.setMonth(n.getMonth()+1);
-        $scope.next = { date: n, link: 'overview/' + n.getFullYear() + '/' + (n.getMonth()+1) };
+        $scope.next = { date: n, link: ['overview' , $routeParams.category, n.getFullYear(), (n.getMonth()+1)].join('/') };
     }
 
     var p = new Date();
     p.setMonth($routeParams.month -1);
     p.setFullYear($routeParams.year);
     p.setMonth(p.getMonth()-1);
-    $scope.prev = { date: p, link: 'overview/' + p.getFullYear() + '/' + (p.getMonth()+1) };
+    $scope.prev = { date: p, link: ['overview' , $routeParams.category, p.getFullYear(), (p.getMonth()+1)].join('/') };
 });
 
 var INTEGER_REGEXP = /^\-?\d*$/;
