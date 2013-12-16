@@ -332,6 +332,14 @@ func init() {
 	dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
 }
 
+func cacheHandler(days int, h http.Handler) http.Handler {
+	dur := time.Duration(days) * time.Duration(24) * time.Hour
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", int64(dur.Seconds())))
+		h.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	defer dbmap.Db.Close()
 	r := mux.NewRouter()
@@ -342,10 +350,13 @@ func main() {
 	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
 
 	// static files get served directly
-	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
-	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.Dir("img/"))))
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("css/"))))
-	r.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", http.FileServer(http.Dir("partials/"))))
+	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", cacheHandler(30, http.FileServer(http.Dir("js/")))))
+	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", cacheHandler(30, http.FileServer(http.Dir("img/")))))
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", cacheHandler(30, http.FileServer(http.Dir("css/")))))
+	r.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", cacheHandler(30, http.FileServer(http.Dir("partials/")))))
+	r.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "favicon.ico")
+	})
 
 	http.Handle("/", r)
 	slog.Println("started...")
