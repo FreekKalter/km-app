@@ -17,6 +17,7 @@ import (
 	"net/http"
 
 	"github.com/coopernurse/gorp"
+	httpgzip "github.com/daaku/go.httpgzip"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -363,5 +364,6 @@ func main() {
 	http.Handle("/", r)
 	slog.Println("started...")
 
-	http.ListenAndServe(":4001", r)
+	// wrap the whole mux router wich implements http.Handler in a gzip middleware
+	http.ListenAndServe(":4001", httpgzip.NewHandler(r))
 }
