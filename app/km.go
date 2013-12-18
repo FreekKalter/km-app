@@ -85,10 +85,11 @@ func init() {
 		slog.Panic(err)
 	}
 
-	templates = template.Must(template.ParseFiles("index.html"))
-
 	if config.Env == "testing" {
 		dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
+	} else {
+		templates = template.Must(template.ParseFiles("index.html"))
+
 	}
 }
 
@@ -176,7 +177,12 @@ func timeStamp(action string) {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	templates.Execute(w, config)
+	if config.Env == "testing" {
+		t, _ := template.ParseFiles("index.html")
+		t.Execute(w, config)
+	} else {
+		templates.Execute(w, config)
+	}
 }
 
 func stateHandler(w http.ResponseWriter, r *http.Request) {
