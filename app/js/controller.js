@@ -39,7 +39,6 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     };
 
     $scope.valid = function(name){
-        console.log($scope);
         return $scope.kmform['{{field}}'].$error.integer;
     };
 
@@ -109,7 +108,7 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
 
     // don't set next when next is in the future
     var n = new Date();
-    if (!($routeParams.month === (n.getMonth()+1) && $routeParams.year === n.getFullYear())) {
+    if (!($routeParams.month == (n.getMonth()+1) && $routeParams.year == n.getFullYear())) {
         n.setMonth($routeParams.month -1 );
         n.setFullYear($routeParams.year);
         n.setMonth(n.getMonth()+1);
