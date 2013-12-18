@@ -8,40 +8,40 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         $http.get('state/'+ $routeParams.id).success(function(data){
             $scope.form = data;
             var toFocus;
-            if (data.Begin.Editable == true){
+            if (data.Begin.Editable === true){
                 toFocus = 'Begin';
-            }else if(data.Eerste.Editable == true){
+            }else if(data.Eerste.Editable === true){
                 toFocus = 'Eerste';
-            }else if(data.Laatste.Editable == true){
+            }else if(data.Laatste.Editable === true){
                 toFocus = 'Laatste';
-            }else if(data.Terug.Editable == true){
+            }else if(data.Terug.Editable === true){
                 toFocus = 'Terug';
             }
             if(toFocus !== undefined){
-                setTimeout(function(){ setFocus(document.getElementById(toFocus)) }, 100);
+                setTimeout(function(){ setFocus(document.getElementById(toFocus)); }, 100);
             }
         });
     };
 
     $scope.save = function(name, fieldValue){
         $http.post('/save', {name: name, value: fieldValue}).success(function(data){
-            if(name == 'Terug'){
+            if(name === 'Terug'){
                 $location.path('/overview');
             }else{
-                eval('$scope.form.'+name+'.Editable=false')
+                eval('$scope.form.'+name+'.Editable=false');
                 $scope.getState();
             }
         });
     };
 
     $scope.edit = function(name){
-        eval('$scope.form.'+name+'.Editable=true')
+        eval('$scope.form.'+name+'.Editable=true');
     };
 
     $scope.valid = function(name){
         console.log($scope);
         return $scope.kmform['{{field}}'].$error.integer;
-    }
+    };
 
     function setFocus(el){
         el.focus();
@@ -66,12 +66,12 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
     //
     $scope.loadData = function(category){
         var path = [ 'overview', category, $routeParams.year, $routeParams.month].join('/');
-        if(category == $routeParams.category){
-            if(category == 'kilometers'){
+        if(category === $routeParams.category){
+            if(category === 'kilometers'){
                 $http.get(path).success(function(data){
                     $scope.kilometers = data;
                 });
-            }else if(category == 'tijden'){
+            }else if(category === 'tijden'){
                 $http.get(path).success(function(data){
                     $scope.times = data;
                 });
@@ -82,25 +82,25 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
     };
 
     // Activate tab based on url
-    if($routeParams.category == 'kilometers'){
+    if($routeParams.category === 'kilometers'){
         $scope.kiloActive = true;
     }
-    if($routeParams.category == 'tijden'){
+    if($routeParams.category === 'tijden'){
         $scope.timesActive = true;
     }
 
-    $scope.delete = function(index){
-        $http.get('delete/' + $scope.days[index].Id ).success(function(data){
-            $scope.days.splice(index, 1) // delete ellemnt from array (delete undefines element)
+    $scope.deleteRow = function(index){
+        $http.get('delete/' + $scope.kilometers[index].Id ).success(function(data){
+            $scope.kilometers.splice(index, 1); // delete ellemnt from array (delete undefines element)
         });
     };
 
-    $scope.edit = function(index){
-        $location.path('/input/' + $scope.days[index].Id);
+    $scope.editRow = function(index){
+        $location.path('/input/' + $scope.kilometers[index].Id);
     };
 
     $scope.go = function(path){
-        if( path == 'next' ){
+        if( path === 'next' ){
             $location.path($scope.next.link);
         } else{
             $location.path($scope.prev.link);
@@ -109,7 +109,7 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
 
     // don't set next when next is in the future
     var n = new Date();
-    if (!($routeParams.month == (n.getMonth()+1) && $routeParams.year == n.getFullYear())) {
+    if (!($routeParams.month === (n.getMonth()+1) && $routeParams.year === n.getFullYear())) {
         n.setMonth($routeParams.month -1 );
         n.setFullYear($routeParams.year);
         n.setMonth(n.getMonth()+1);
@@ -131,23 +131,23 @@ kmApp.directive('integer', function() {
             ctrl.$parsers.unshift(function(viewValue) {
                 if (INTEGER_REGEXP.test(viewValue)) {
                     // it is valid
-                    if(attrs.id == 'Begin'){
+                    if(attrs.id === 'Begin'){
                         ctrl.$setValidity('integer', true);
                         return viewValue;
                     }
-                    if(attrs.id == 'Eerste'){
+                    if(attrs.id === 'Eerste'){
                         if(viewValue >= scope.form.Begin.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
-                    if(attrs.id == 'Laatste'){
+                    if(attrs.id === 'Laatste'){
                         if(viewValue >= scope.form.Eerste.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
-                    if(attrs.id == 'Terug'){
+                    if(attrs.id === 'Terug'){
                         if(viewValue >= scope.form.Laatste.Value){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
