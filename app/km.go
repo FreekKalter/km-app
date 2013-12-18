@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+
+	"html/template"
 	"strconv"
 
 	"fmt"
@@ -20,11 +22,14 @@ import (
 	httpgzip "github.com/daaku/go.httpgzip"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"launchpad.net/goyaml"
 )
 
 var (
-	dbmap *gorp.DbMap
-	slog  *log.Logger
+	dbmap     *gorp.DbMap
+	slog      *log.Logger
+	config    Config
+	templates *template.Template
 )
 
 func main() {
@@ -46,10 +51,49 @@ func main() {
 	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
 
 	http.Handle("/", r)
-	slog.Println("started...")
+	slog.Printf("started... (%s)\n", config.Env)
 
 	// wrap the whole mux router wich implements http.Handler in a gzip middleware
 	http.ListenAndServe(":4001", httpgzip.NewHandler(r))
+}
+
+func init() {
+	os.Chdir("/app")
+	// Set up logging
+	var err error
+	logFile, err := os.OpenFile("/log/km.log", syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
+	slog = log.New(logFile, "km: ", log.LstdFlags)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	db, err := sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
+	if err != nil {
+		slog.Fatal("dberror: ", err)
+	}
+	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
+	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
+	dbmap.AddTable(Times{}).SetKeys(true, "Id")
+
+	// Load config
+	configFile, err := ioutil.ReadFile("config.yml")
+	if err != nil {
+		slog.Panic(err)
+	}
+	err = goyaml.Unmarshal(configFile, &config)
+	if err != nil {
+		slog.Panic(err)
+	}
+
+	templates = template.Must(template.ParseFiles("index.html"))
+
+	if config.Env == "testing" {
+		dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
+	}
+}
+
+type Config struct {
+	Env string
 }
 
 type PostValue struct {
@@ -132,11 +176,7 @@ func timeStamp(action string) {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	indexContent, err := ioutil.ReadFile("index.html")
-	if err != nil {
-		slog.Fatal(err)
-	}
-	fmt.Fprintf(w, string(indexContent))
+	templates.Execute(w, config)
 }
 
 func stateHandler(w http.ResponseWriter, r *http.Request) {
@@ -337,27 +377,6 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "ok")
-}
-
-func init() {
-	os.Chdir("/app")
-	// Set up logging
-	var err error
-	logFile, err := os.OpenFile("/log/km.log", syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
-	slog = log.New(logFile, "km: ", log.LstdFlags)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	db, err := sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
-	if err != nil {
-		slog.Fatal("dberror: ", err)
-	}
-	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
-	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
-	dbmap.AddTable(Times{}).SetKeys(true, "Id")
-
-	dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
 }
 
 func cacheHandler(h http.Handler, days int) http.Handler {

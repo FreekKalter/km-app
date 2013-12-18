@@ -5,3 +5,4 @@ postgresdata
 .cidfile
 *.min.*
 app/js/combined*
+app/config.yml

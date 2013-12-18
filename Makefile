@@ -11,7 +11,12 @@ YUI_COMPRESSOR = /usr/bin/yui-compressor
 YUI_COMPRESSOR_FLAGS = --charset utf-8 --verbose
 
 CSS_MINIFIED = $(CSS_FILES:.css=.min.css)
-all: app/km minify test-run
+production: app/km minify production-config
+
+production-config:
+	cp config-production.yml app/config.yml
+
+testing: app/km minify test-run
 
 app/km: app/km.go
 	go build -o app/km app/km.go
@@ -44,6 +49,7 @@ app/js/combined.anno.min.js: app/js/combined.anno.js
 test-run: app/km
 	docker kill `cat .cidfile`
 	rm .cidfile
+	cp config-testing.yml app/config.yml
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
 								   -v /home/fkalter/github/km/app:/app:rw\
 								   -v /home/fkalter/github/km/log:/log:rw\

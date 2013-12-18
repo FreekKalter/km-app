@@ -2,6 +2,7 @@ from fabric.api import *
 
 env.hosts = ['fkalter@km-app.dyndns.org']
 def deploy():
+    local("make production")
     local("docker build -t freekkalter/km:deploy .")
     local("docker push freekkalter/km")
     remote()
