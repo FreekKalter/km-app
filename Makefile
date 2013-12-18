@@ -36,7 +36,7 @@ minify-css: $(CSS_FILES) $(CSS_MINIFIED)
 minify-js: app/js/combined.anno.js app/js/combined.anno.min.js
 
 app/js/combined.js: app/js/app.js app/js/controller.js
-	cat app/js/app.js app/js/controller.js > app/js/combined.js
+	cat app/js/app.js app/js/controller.js app/js/animations.js > app/js/combined.js
 
 app/js/combined.anno.js: app/js/combined.js
 	ngmin app/js/combined.js app/js/combined.anno.js

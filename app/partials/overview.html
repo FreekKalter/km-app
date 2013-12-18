@@ -14,7 +14,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr ng-repeat="kilometer in kilometers">
+                    <tr ng-repeat="kilometer in kilometers" class="repeated-item">
                         <td>{{kilometer.Date |date:'EEE dd-MM-yyyy'}}</td>
                         <td>{{kilometer.Begin}}</td>
                         <td>{{kilometer.Eerste}}</td>
@@ -45,7 +45,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="t in times">
+                <tr ng-repeat="t in times" class="repeated-item">
                     <td>{{t.Date |date:'EEE dd-MM-yyyy'}}</td>
                     <td>{{t.CheckIn |date:'HH:mm'}}</td>
                     <td>{{t.CheckOut |date:'HH:mm'}}</td>

@@ -1,4 +1,4 @@
-var kmApp = angular.module('kmApp', ['ngRoute', 'kmControllers' , 'ui.bootstrap']);
+var kmApp = angular.module('kmApp', ['ngRoute', 'kmControllers' ,'kmAnimations' ,'ui.bootstrap' ]);
 
 kmApp.config(['$routeProvider', function($routeProvider, $locationProvider){
     var d = new Date();
