@@ -22,6 +22,36 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var (
+	dbmap *gorp.DbMap
+	slog  *log.Logger
+)
+
+func main() {
+	defer dbmap.Db.Close()
+	r := mux.NewRouter()
+
+	// static files get served directly
+	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", cacheHandler(http.FileServer(http.Dir("js/")), 30)))
+	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", cacheHandler(http.FileServer(http.Dir("img/")), 30)))
+	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", cacheHandler(http.FileServer(http.Dir("css/")), 30)))
+	r.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", cacheHandler(http.FileServer(http.Dir("partials/")), 30)))
+
+	r.Handle("/favicon.ico", cacheHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "favicon.ico") }), 40))
+
+	r.HandleFunc("/", homeHandler).Methods("GET")
+	r.HandleFunc("/state/{id}", stateHandler).Methods("GET")
+	r.HandleFunc("/save", saveHandler).Methods("POST")
+	r.HandleFunc("/overview/{category}/{year}/{month}", overviewHandler).Methods("GET")
+	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
+
+	http.Handle("/", r)
+	slog.Println("started...")
+
+	// wrap the whole mux router wich implements http.Handler in a gzip middleware
+	http.ListenAndServe(":4001", httpgzip.NewHandler(r))
+}
+
 type PostValue struct {
 	Name  string
 	Value int
@@ -63,6 +93,13 @@ func (k *Kilometers) addPost(pv PostValue) {
 	}
 }
 
+type Times struct {
+	Id       int64
+	Date     time.Time
+	CheckIn  int64
+	CheckOut int64
+}
+
 func timeStamp(action string) {
 	id, err := dbmap.SelectInt("select Id from times where date=$1", getDateStr())
 	if err != nil {
@@ -93,16 +130,6 @@ func timeStamp(action string) {
 		dbmap.Update(today)
 	}
 }
-
-type Times struct {
-	Id       int64
-	Date     time.Time
-	CheckIn  int64
-	CheckOut int64
-}
-
-var dbmap *gorp.DbMap
-var slog *log.Logger
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	indexContent, err := ioutil.ReadFile("index.html")
@@ -341,29 +368,4 @@ func cacheHandler(h http.Handler, days int) http.Handler {
 		h.ServeHTTP(w, r)
 	}
 	return http.HandlerFunc(ourHandler)
-}
-
-func main() {
-	defer dbmap.Db.Close()
-	r := mux.NewRouter()
-
-	// static files get served directly
-	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", cacheHandler(http.FileServer(http.Dir("js/")), 30)))
-	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", cacheHandler(http.FileServer(http.Dir("img/")), 30)))
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", cacheHandler(http.FileServer(http.Dir("css/")), 30)))
-	r.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", cacheHandler(http.FileServer(http.Dir("partials/")), 30)))
-
-	r.Handle("/favicon.ico", cacheHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "favicon.ico") }), 40))
-
-	r.HandleFunc("/", homeHandler).Methods("GET")
-	r.HandleFunc("/state/{id}", stateHandler).Methods("GET")
-	r.HandleFunc("/save", saveHandler).Methods("POST")
-	r.HandleFunc("/overview/{category}/{year}/{month}", overviewHandler).Methods("GET")
-	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
-
-	http.Handle("/", r)
-	slog.Println("started...")
-
-	// wrap the whole mux router wich implements http.Handler in a gzip middleware
-	http.ListenAndServe(":4001", httpgzip.NewHandler(r))
 }
