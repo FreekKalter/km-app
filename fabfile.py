@@ -1,11 +1,15 @@
 from fabric.api import *
 
-env.hosts = ['fkalter@km-app.dyndns.org']
+env.use_ssh_config = True
+env.hosts.extend( ['fkalter@km-app.dyndns.org'])
 def deploy():
+    prepare()
+    remote()
+
+def prepare():
     local("make production")
     local("docker build -t freekkalter/km:deploy .")
     local("docker push freekkalter/km")
-    remote()
 
 def remote():
     cidfile = '/home/fkalter/.km.cidfile'
