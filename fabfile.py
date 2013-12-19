@@ -1,7 +1,7 @@
 from fabric.api import *
 
-env.ssh_config_path = '/home/fkalter/.ssh/config'
 env.use_ssh_config = True
+env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
 env.hosts.extend( ['fkalter@km-app.dyndns.org'])
 
 def deploy():
@@ -9,8 +9,6 @@ def deploy():
     remote()
 
 def prepare():
-    local("echo $SSH_AGENT_PID")
-    local("echo $SSH_AUTH_SOCK")
     local("make production")
     local("docker build -t freekkalter/km:deploy .")
     local("docker push freekkalter/km")
