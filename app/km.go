@@ -336,16 +336,21 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		slog.Fatal(err)
+		http.Error(w, "method not allowd ", 400)
+		slog.Println(err)
+		return
 	}
 	var pv PostValue
 	err = json.Unmarshal(body, &pv)
 	if err != nil {
-		slog.Fatal(err)
+		http.Error(w, "method not allowd ", 400)
+		slog.Println(err)
+		return
 	}
 
 	// sanitize columns
 	if !allowedMethod(pv.Name) {
+		http.Error(w, "method not allowd ", 400)
 		return
 	} else {
 		pv.Name = strings.ToLower(pv.Name)
