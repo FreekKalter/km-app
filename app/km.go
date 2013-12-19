@@ -283,6 +283,7 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Println("overview", year, month)
 
+	jsonEncoder := json.NewEncoder(w)
 	switch category {
 	case "kilometers":
 		all := make([]Kilometers, 0)
@@ -291,7 +292,6 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 			slog.Fatal("overview:", err)
 		}
 
-		jsonEncoder := json.NewEncoder(w)
 		jsonEncoder.Encode(all)
 
 	case "tijden":
@@ -313,7 +313,6 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 			col.Hours = int((time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours())
 			columns = append(columns, col)
 		}
-		jsonEncoder := json.NewEncoder(w)
 		jsonEncoder.Encode(columns)
 	}
 }
