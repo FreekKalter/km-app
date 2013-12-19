@@ -9,6 +9,8 @@ def deploy():
     remote()
 
 def prepare():
+    local("echo $SSH_AGENT_PID")
+    local("echo $SSH_AUTH_SOCK")
     local("make production")
     local("docker build -t freekkalter/km:deploy .")
     local("docker push freekkalter/km")
