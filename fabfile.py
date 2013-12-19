@@ -7,7 +7,7 @@ def deploy():
     remote()
 
 def prepare():
-    local("echo {}".format(env.key_filename))
+    local("echo $HOME")
     local("make production")
     local("docker build -t freekkalter/km:deploy .")
     local("docker push freekkalter/km")
