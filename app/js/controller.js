@@ -1,4 +1,7 @@
 'use strict';
+/*jslint browser:true*/
+/*global angular, kmApp*/
+
 var kmControllers = angular.module('kmControllers', []);
 
 kmControllers.controller('kmInput', function($scope,$routeParams, $location, $http){
@@ -28,14 +31,14 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
             if(name === 'Terug'){
                 $location.path('/overview');
             }else{
-                eval('$scope.form.'+name+'.Editable=false');
+                $scope.form[name].Editable=false;
                 $scope.getState();
             }
         });
     };
 
     $scope.edit = function(name){
-        eval('$scope.form.'+name+'.Editable=true');
+        $scope.form[name].Editable=true;
     };
 
     $scope.valid = function(name){
@@ -169,7 +172,6 @@ kmApp.directive('ngEnter', function () {
                 scope.$apply(function (){
                     scope.$eval(attrs.ngEnter);
                 });
-
                 event.preventDefault();
             }
         });
