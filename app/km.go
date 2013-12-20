@@ -69,7 +69,7 @@ func init() {
 
 	db, err := sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
 	if err != nil {
-		slog.Fatal("dberror: ", err)
+		slog.Fatal("init:", err)
 	}
 	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
 	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
@@ -148,7 +148,8 @@ type Times struct {
 func timeStamp(action string) {
 	id, err := dbmap.SelectInt("select Id from times where date=$1", getDateStr())
 	if err != nil {
-		slog.Fatal(err)
+		slog.Println("timestamp:", err)
+		return
 	}
 	today := new(Times)
 	now := time.Now().Unix()
@@ -164,7 +165,8 @@ func timeStamp(action string) {
 	} else {
 		err = dbmap.SelectOne(today, "select * from times where id=$1", id)
 		if err != nil {
-			slog.Fatal(err)
+			slog.Println("timestamp:", err)
+			return
 		}
 		switch action {
 		case "in":
@@ -213,14 +215,18 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case err != nil:
 		if err != nil {
-			slog.Fatal(err)
+			http.Error(w, "Database error", 500)
+			slog.Println("stateHandler:", err)
+			return
 		}
 	case today == (Kilometers{}): // today not saved yet TODO: check this
 		slog.Println("no today")
 		var lastDay Kilometers
 		err := dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
 		if err != nil {
-			slog.Fatal(err)
+			http.Error(w, "Database error", 500)
+			slog.Println("stateHandler:", err)
+			return
 		}
 		if lastDay == (Kilometers{}) { // Nothing in db yet
 
@@ -275,11 +281,15 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 	category := vars["category"]
 	month, err := strconv.ParseInt(vars["month"], 10, 64)
 	if err != nil {
-		slog.Fatal(err)
+		http.Error(w, "invalid month", 400)
+		slog.Println("overview:", err)
+		return
 	}
 	year, err := strconv.ParseInt(vars["year"], 10, 64)
 	if err != nil {
-		slog.Fatal(err)
+		http.Error(w, "invalid year", 400)
+		slog.Println("overview:", err)
+		return
 	}
 	slog.Println("overview", year, month)
 
@@ -289,7 +299,9 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		all := make([]Kilometers, 0)
 		_, err := dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			slog.Fatal("overview:", err)
+			http.Error(w, "Database error", 500)
+			slog.Println("overview:", err)
+			return
 		}
 
 		jsonEncoder.Encode(all)
@@ -303,7 +315,9 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 		columns := make([]Column, 0)
 		_, err := dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			slog.Fatal(err)
+			http.Error(w, "Database error", 500)
+			slog.Println("overview:", err)
+			return
 		}
 		for _, c := range all {
 			var col Column
@@ -323,7 +337,9 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Println("delete:", id)
 	_, err := dbmap.Exec("delete from kilometers where id=$1", id)
 	if err != nil {
-		slog.Fatal(err)
+		http.Error(w, "Database error", 500)
+		slog.Println("delete:", err)
+		return
 	}
 }
 
@@ -336,21 +352,21 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "method not allowd ", 400)
+		http.Error(w, "could not parse request", 400)
 		slog.Println(err)
 		return
 	}
 	var pv PostValue
 	err = json.Unmarshal(body, &pv)
 	if err != nil {
-		http.Error(w, "method not allowd ", 400)
+		http.Error(w, "could not parse request", 400)
 		slog.Println(err)
 		return
 	}
 
 	// sanitize columns
 	if !allowedMethod(pv.Name) {
-		http.Error(w, "method not allowd ", 400)
+		http.Error(w, "Unknown fieldname to save ", 400)
 		return
 	} else {
 		pv.Name = strings.ToLower(pv.Name)
@@ -371,21 +387,26 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		slog.Println(today)
 		err = dbmap.Insert(today)
 		if err != nil {
-			slog.Fatal(err)
+			http.Error(w, "Database error", 500)
+			slog.Println(err)
+			return
 		}
 	} else { // update already partially saved day
 		err = dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
 		//today, err = dbmap.Get(Kilometers{}, id)
 		if err != nil {
-			slog.Fatal(err)
+			http.Error(w, "Database error", 500)
+			slog.Println(err)
+			return
 		}
 		today.addPost(pv)
 		_, err = dbmap.Update(today)
 		if err != nil {
-			slog.Fatal(err)
+			http.Error(w, "Database error", 500)
+			slog.Println(err)
+			return
 		}
 	}
-
 	fmt.Fprintf(w, "ok")
 }
 
