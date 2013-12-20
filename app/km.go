@@ -3,26 +3,24 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-
-	"html/template"
-	"strconv"
-
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
-	"syscall"
-
-	"net/http"
-
 	"github.com/coopernurse/gorp"
-	httpgzip "github.com/daaku/go.httpgzip"
 	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 	"launchpad.net/goyaml"
+
+	httpgzip "github.com/daaku/go.httpgzip"
+
+	_ "github.com/lib/pq"
 )
 
 var (
