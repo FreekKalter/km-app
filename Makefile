@@ -56,6 +56,17 @@ test-run: app/km
 								   -d -p 4001:4001 -p 5432:5432\
 								   freekkalter/postgres-supervisord:km /usr/bin/supervisord
 
+test-deploy: app/km
+	docker build freekkalter/km:deploy .
+	docker kill `cat .cidfile`
+	rm .cidfile
+	cp config-production.yml app/config.yml
+	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
+								   -v /home/fkalter/github/km/app:/app:rw\
+								   -v /home/fkalter/github/km/log:/log:rw\
+								   -d -p 4001:4001 -p 5432:5432\
+								   freekkalter/km:deploy /usr/bin/supervisord
+
 # target: clean - Removes minified CSS and JS files.
 clean:
 	rm -f $(CSS_MINIFIED)
