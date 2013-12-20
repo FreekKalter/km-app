@@ -56,8 +56,8 @@ test-run: app/km
 								   -d -p 4001:4001 -p 5432:5432\
 								   freekkalter/postgres-supervisord:km /usr/bin/supervisord
 
-test-deploy: app/km
-	docker build freekkalter/km:deploy .
+test-deploy: app/km minify
+	docker build -t freekkalter/km:deploy .
 	docker kill `cat .cidfile`
 	rm .cidfile
 	cp config-production.yml app/config.yml
@@ -71,3 +71,5 @@ test-deploy: app/km
 clean:
 	rm -f $(CSS_MINIFIED)
 	rm -f app/km
+	rm -f app/js/*.min.js
+	rm -f app/js/combined*.js
