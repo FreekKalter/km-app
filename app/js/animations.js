@@ -1,3 +1,5 @@
+/*global jQuery,angular*/
+(function(){
 'use strict';
 var kmAnimations = angular.module('kmAnimations', ['ngAnimate']);
 
@@ -14,7 +16,7 @@ kmAnimations.animation('.repeated-item', function(){
                 if(isCancelled) {
                     jQuery(element).stop();
                 }
-            }
+            };
         },
         leave : function(element, done) {
             element.css('opacity', 1);
@@ -27,7 +29,7 @@ kmAnimations.animation('.repeated-item', function(){
                 if(isCancelled) {
                     jQuery(element).stop();
                 }
-            }
+            };
         },
         move : function(element, done) {
             element.css('opacity', 0);
@@ -40,12 +42,12 @@ kmAnimations.animation('.repeated-item', function(){
                 if(isCancelled) {
                     jQuery(element).stop();
                 }
-            }
+            };
         },
 
         // you can also capture these animation events
         addClass : function(element, className, done) {},
         removeClass : function(element, className, done) {}
-    }
+    };
 });
-
+}());

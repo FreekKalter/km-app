@@ -1,6 +1,7 @@
-'use strict';
 /*jslint browser:true*/
 /*global angular, kmApp*/
+(function(){
+'use strict';
 
 var kmControllers = angular.module('kmControllers', []);
 
@@ -177,3 +178,4 @@ kmApp.directive('ngEnter', function () {
         });
     };
 });
+}());
