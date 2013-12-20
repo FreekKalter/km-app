@@ -1,4 +1,3 @@
-(function(){
 'use strict';
 var kmApp = angular.module('kmApp', ['ngRoute', 'kmControllers' ,'kmAnimations' ,'ui.bootstrap' ]);
 
@@ -20,4 +19,3 @@ kmApp.config(['$routeProvider', function($routeProvider, $locationProvider){
         redirectTo: '/overview/'
     });
 }]);
-}());

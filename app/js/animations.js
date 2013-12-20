@@ -1,5 +1,4 @@
 /*global jQuery,angular*/
-(function(){
 'use strict';
 var kmAnimations = angular.module('kmAnimations', ['ngAnimate']);
 
@@ -50,4 +49,3 @@ kmAnimations.animation('.repeated-item', function(){
         removeClass : function(element, className, done) {}
     };
 });
-}());
