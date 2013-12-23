@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -28,6 +29,7 @@ var (
 	slog      *log.Logger
 	config    Config
 	templates *template.Template
+	logfile   = flag.String("log", "./log/km.log", "location of logfile")
 )
 
 func main() {
@@ -56,10 +58,10 @@ func main() {
 }
 
 func init() {
-	os.Chdir("/app")
+	flag.Parse()
 	// Set up logging
 	var err error
-	logFile, err := os.OpenFile("/log/km.log", syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
+	logFile, err := os.OpenFile(*logfile, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
 	slog = log.New(logFile, "km: ", log.LstdFlags)
 	if err != nil {
 		log.Panic(err)
@@ -98,42 +100,6 @@ type Config struct {
 type PostValue struct {
 	Name  string
 	Value int
-}
-
-type Kilometers struct {
-	Id                            int64
-	Date                          time.Time
-	Begin, Eerste, Laatste, Terug int
-	Comment                       string
-}
-
-func (k *Kilometers) getMax() int {
-	if k.Terug > 0 {
-		return k.Terug
-	}
-	if k.Laatste > 0 {
-		return k.Laatste
-	}
-	if k.Eerste > 0 {
-		return k.Eerste
-	}
-	if k.Begin > 0 {
-		return k.Begin
-	}
-	return 0
-}
-
-func (k *Kilometers) addPost(pv PostValue) {
-	switch pv.Name {
-	case "begin":
-		k.Begin = pv.Value
-	case "eerste":
-		k.Eerste = pv.Value
-	case "laatste":
-		k.Laatste = pv.Value
-	case "terug":
-		k.Terug = pv.Value
-	}
 }
 
 type Times struct {

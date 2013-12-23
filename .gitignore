@@ -6,3 +6,5 @@ postgresdata
 *.min.*
 app/js/combined*
 app/config.yml
+gen
+app/app.test
