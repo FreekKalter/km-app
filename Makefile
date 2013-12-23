@@ -1,10 +1,10 @@
 app/km: app/km.go
-	go test ./app
 	go build -o app/km app/km.go app/kilometers.go
 
 .PHONY: test-run
 test-run: app/km
 	-pkill km
+	go test ./app
 	cp ./config-testing.yml app/config.yml
 	cd app && ./km &
 
