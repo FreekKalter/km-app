@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"flag"
+
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -29,7 +29,6 @@ var (
 	slog      *log.Logger
 	config    Config
 	templates *template.Template
-	logfile   = flag.String("log", "./log/km.log", "location of logfile")
 )
 
 func main() {
@@ -58,10 +57,18 @@ func main() {
 }
 
 func init() {
-	flag.Parse()
+	// Load config
+	configFile, err := ioutil.ReadFile("config.yml")
+	if err != nil {
+		panic(err)
+	}
+	err = goyaml.Unmarshal(configFile, &config)
+	if err != nil {
+		panic(err)
+	}
+
 	// Set up logging
-	var err error
-	logFile, err := os.OpenFile(*logfile, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
+	logFile, err := os.OpenFile(config.Log, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
 	slog = log.New(logFile, "km: ", log.LstdFlags)
 	if err != nil {
 		log.Panic(err)
@@ -75,16 +82,6 @@ func init() {
 	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
 	dbmap.AddTable(Times{}).SetKeys(true, "Id")
 
-	// Load config
-	configFile, err := ioutil.ReadFile("config.yml")
-	if err != nil {
-		slog.Panic(err)
-	}
-	err = goyaml.Unmarshal(configFile, &config)
-	if err != nil {
-		slog.Panic(err)
-	}
-
 	if config.Env == "testing" {
 		dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
 	} else {
@@ -95,6 +92,7 @@ func init() {
 
 type Config struct {
 	Env string
+	Log string
 }
 
 type PostValue struct {

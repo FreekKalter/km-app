@@ -4,6 +4,7 @@ app/km: app/km.go
 .PHONY: test-run
 test-run: app/km
 	-pkill km
+	cp ./config-testing.yml app/config.yml
 	cd app && ./km &
 
 .PHONY: start-postgres
@@ -15,13 +16,17 @@ start-postgres:
 								   -d -p 5432:5432\
 								   freekkalter/postgres-supervisord:km /usr/bin/supervisord
 
-test-deploy: app/km minify
+.PHONY: prepare-production
+prepare-production: app/km minify
+	cp config-production.yml app/config.yml
 	docker build -t freekkalter/km:deploy .
+
+.PHONY: run-local-production
+run-local-production: prepare-production
+	-pkill km
 	docker kill `cat .cidfile`
 	rm .cidfile
-	cp config-production.yml app/config.yml
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
-								   -v /home/fkalter/github/km/app:/app:rw\
 								   -v /home/fkalter/github/km/log:/log:rw\
 								   -d -p 4001:4001 -p 5432:5432\
 								   freekkalter/km:deploy /usr/bin/supervisord

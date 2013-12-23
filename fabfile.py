@@ -1,4 +1,5 @@
 from fabric.api import *
+import os
 
 env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
@@ -9,8 +10,9 @@ def deploy():
     remote()
 
 def prepare():
-    local("make production")
-    local("docker build -t freekkalter/km:deploy .")
+    local("make prepare-production")
+    local("echo {}".format(os.environ['BUILD_NUMBER']))
+    local("docker build -t freekkalter/km:{} .".format(os.environ['BUILD_NUMBER']))
     local("docker push freekkalter/km")
 
 def remote():
@@ -22,4 +24,4 @@ def remote():
                      -v /home/fkalter/km/postgresdata:/data:rw\
                      -v /home/fkalter/km/log:/log\
                      -d -p 4001:4001\
-                     freekkalter/km:deploy /usr/bin/supervisord".format(cidfile))
+                     freekkalter/km:{} /usr/bin/supervisord".format(cidfile, os.environ['BUILD_NUMBER']))
