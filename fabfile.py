@@ -29,6 +29,7 @@ def remoteDeploy():
 
 # Rollback excepts a excact buildnumber or a negative offset to rollback that number builds
 def rollback():
+    # find latest buildnumber on remote, default = the build before the last one
     bn = int(run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1"))
     buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=bn-1))
     if buildNumber < 0:

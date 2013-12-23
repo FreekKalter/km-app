@@ -9,6 +9,12 @@ type Kilometers struct {
 	Comment                       string
 }
 
+func NewKilometers() *Kilometers {
+	k := new(Kilometers)
+	k.Date = time.Now().UTC()
+	return k
+}
+
 func (k *Kilometers) getMax() int {
 	if k.Terug > 0 {
 		return k.Terug

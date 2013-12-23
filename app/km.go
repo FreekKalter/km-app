@@ -229,7 +229,7 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func allowedMethod(method string) bool {
+func fieldAllowed(method string) bool {
 	for _, v := range []string{"Begin", "Eerste", "Laatste", "Terug"} {
 		if v == method {
 			return true
@@ -327,7 +327,7 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// sanitize columns
-	if !allowedMethod(pv.Name) {
+	if !fieldAllowed(pv.Name) {
 		http.Error(w, "Unknown fieldname to save ", 400)
 		return
 	} else {
@@ -342,9 +342,9 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	dateStr := getDateStr()
 	id, err := dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
 
-	today := new(Kilometers)
+	//today := new(Kilometers)
+	today := NewKilometers()
 	if id == 0 { // nothing saved for today, save posted data and date
-		today.Date = time.Now().UTC()
 		today.addPost(pv)
 		slog.Println(today)
 		err = dbmap.Insert(today)

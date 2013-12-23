@@ -1,4 +1,5 @@
 app/km: app/km.go
+	go test ./app
 	go build -o app/km app/km.go app/kilometers.go
 
 .PHONY: test-run
@@ -19,13 +20,13 @@ start-postgres:
 .PHONY: prepare-production
 prepare-production: app/km minify
 	cp config-production.yml app/config.yml
-	docker build -t freekkalter/km:deploy .
 
 .PHONY: run-local-production
 run-local-production: prepare-production
 	-pkill km
 	docker kill `cat .cidfile`
 	rm .cidfile
+	docker build -t freekkalter/km:deploy .
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
 								   -v /home/fkalter/github/km/log:/log:rw\
 								   -d -p 4001:4001 -p 5432:5432\
