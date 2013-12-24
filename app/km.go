@@ -19,75 +19,83 @@ import (
 	"github.com/gorilla/mux"
 	"launchpad.net/goyaml"
 
-	httpgzip "github.com/daaku/go.httpgzip"
-
 	_ "github.com/lib/pq"
 )
 
-var (
-	dbmap     *gorp.DbMap
-	slog      *log.Logger
-	config    Config
+type Server struct {
+	mux.Router
+	Dbmap     *gorp.DbMap
 	templates *template.Template
-)
-
-func main() {
-	defer dbmap.Db.Close()
-	r := mux.NewRouter()
-
-	// static files get served directly
-	r.PathPrefix("/js/").Handler(http.StripPrefix("/js/", cacheHandler(http.FileServer(http.Dir("js/")), 30)))
-	r.PathPrefix("/img/").Handler(http.StripPrefix("/img/", cacheHandler(http.FileServer(http.Dir("img/")), 30)))
-	r.PathPrefix("/css/").Handler(http.StripPrefix("/css/", cacheHandler(http.FileServer(http.Dir("css/")), 30)))
-	r.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", cacheHandler(http.FileServer(http.Dir("partials/")), 30)))
-
-	r.Handle("/favicon.ico", cacheHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "favicon.ico") }), 40))
-
-	r.HandleFunc("/", homeHandler).Methods("GET")
-	r.HandleFunc("/state/{id}", stateHandler).Methods("GET")
-	r.HandleFunc("/save", saveHandler).Methods("POST")
-	r.HandleFunc("/overview/{category}/{year}/{month}", overviewHandler).Methods("GET")
-	r.HandleFunc("/delete/{id}", deleteHandler).Methods("GET")
-
-	http.Handle("/", r)
-	slog.Printf("started... (%s)\n", config.Env)
-
-	// wrap the whole mux router wich implements http.Handler in a gzip middleware
-	http.ListenAndServe(":4001", httpgzip.NewHandler(r))
+	log       *log.Logger
+	config    Config
 }
 
-func init() {
+func NewServer(dbName string, config Config) *Server {
+	// Set up logging
+	var slog *log.Logger
+	if config.Log == "" {
+		slog = log.New(ioutil.Discard, "km: ", log.LstdFlags)
+	} else {
+		logFile, err := os.OpenFile(config.Log, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
+		if err != nil {
+			log.Panic(err)
+		}
+		slog = log.New(logFile, "km: ", log.LstdFlags)
+	}
+
+	db, err := sql.Open("postgres", "user=docker dbname="+dbName+" password=docker sslmode=disable")
+	if err != nil {
+		slog.Fatal("init:", err)
+	}
+	var Dbmap *gorp.DbMap
+	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
+	Dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
+	Dbmap.AddTable(Times{}).SetKeys(true, "Id")
+
+	var templates *template.Template
+	if config.Env == "testing" {
+		Dbmap.TraceOn("[gorp]", slog)
+	} else {
+		templates = template.Must(template.ParseFiles("index.html"))
+	}
+	s := &Server{Dbmap: Dbmap, templates: templates, log: slog, config: config}
+
+	// static files get served directly
+	s.PathPrefix("/js/").Handler(http.StripPrefix("/js/", cacheHandler(http.FileServer(http.Dir("js/")), 30)))
+	s.PathPrefix("/img/").Handler(http.StripPrefix("/img/", cacheHandler(http.FileServer(http.Dir("img/")), 30)))
+	s.PathPrefix("/css/").Handler(http.StripPrefix("/css/", cacheHandler(http.FileServer(http.Dir("css/")), 30)))
+	s.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", cacheHandler(http.FileServer(http.Dir("partials/")), 30)))
+
+	s.Handle("/favicon.ico", cacheHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "favicon.ico") }), 40))
+
+	s.HandleFunc("/", s.homeHandler).Methods("GET")
+	s.HandleFunc("/state/{id}", s.stateHandler).Methods("GET")
+	s.HandleFunc("/save", s.saveHandler).Methods("POST")
+	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
+	s.HandleFunc("/delete/{id}", s.deleteHandler).Methods("GET")
+	return s
+}
+
+func main() {
 	// Load config
 	configFile, err := ioutil.ReadFile("config.yml")
 	if err != nil {
 		panic(err)
 	}
+	var config Config
 	err = goyaml.Unmarshal(configFile, &config)
 	if err != nil {
 		panic(err)
 	}
 
-	// Set up logging
-	logFile, err := os.OpenFile(config.Log, syscall.O_WRONLY|syscall.O_APPEND|syscall.O_CREAT, 0666)
-	slog = log.New(logFile, "km: ", log.LstdFlags)
-	if err != nil {
-		log.Panic(err)
-	}
+	s := NewServer("km", config)
+	defer s.Dbmap.Db.Close()
 
-	db, err := sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
-	if err != nil {
-		slog.Fatal("init:", err)
-	}
-	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
-	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
-	dbmap.AddTable(Times{}).SetKeys(true, "Id")
+	http.Handle("/", s)
+	s.log.Printf("started... (%s)\n", config.Env)
 
-	if config.Env == "testing" {
-		dbmap.TraceOn("[gorp]", log.New(logFile, "myapp:", log.Lmicroseconds))
-	} else {
-		templates = template.Must(template.ParseFiles("index.html"))
-
-	}
+	// wrap the whole mux router wich implements http.Handler in a gzip middleware
+	http.ListenAndServe(":4001", s)
 }
 
 type Config struct {
@@ -107,10 +115,10 @@ type Times struct {
 	CheckOut int64
 }
 
-func timeStamp(action string) {
-	id, err := dbmap.SelectInt("select Id from times where date=$1", getDateStr())
+func timeStamp(s *Server, action string) {
+	id, err := s.Dbmap.SelectInt("select Id from times where date=$1", getDateStr())
 	if err != nil {
-		slog.Println("timestamp:", err)
+		s.log.Println("timestamp:", err)
 		return
 	}
 	today := new(Times)
@@ -123,11 +131,11 @@ func timeStamp(action string) {
 		case "out":
 			today.CheckOut = now
 		}
-		dbmap.Insert(today)
+		s.Dbmap.Insert(today)
 	} else {
-		err = dbmap.SelectOne(today, "select * from times where id=$1", id)
+		err = s.Dbmap.SelectOne(today, "select * from times where id=$1", id)
 		if err != nil {
-			slog.Println("timestamp:", err)
+			s.log.Println("timestamp:", err)
 			return
 		}
 		switch action {
@@ -136,20 +144,20 @@ func timeStamp(action string) {
 		case "out":
 			today.CheckOut = now
 		}
-		dbmap.Update(today)
+		s.Dbmap.Update(today)
 	}
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	if config.Env == "testing" {
+func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
+	if s.config.Env == "testing" {
 		t, _ := template.ParseFiles("index.html")
-		t.Execute(w, config)
+		t.Execute(w, s.config)
 	} else {
-		templates.Execute(w, config)
+		s.templates.Execute(w, s.config)
 	}
 }
 
-func stateHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
@@ -170,24 +178,24 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 	var today Kilometers
 	var err error
 	if id == "today" {
-		err = dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
+		err = s.Dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
 	} else {
-		err = dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
+		err = s.Dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
 	}
 	switch {
 	case err != nil:
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println("stateHandler:", err)
+			s.log.Println("stateHandler:", err)
 			return
 		}
 	case today == (Kilometers{}): // today not saved yet TODO: check this
-		slog.Println("no today")
+		s.log.Println("no today")
 		var lastDay Kilometers
-		err := dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
+		err := s.Dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println("stateHandler:", err)
+			s.log.Println("stateHandler:", err)
 			return
 		}
 		if lastDay == (Kilometers{}) { // Nothing in db yet
@@ -198,7 +206,7 @@ func stateHandler(w http.ResponseWriter, r *http.Request) {
 		state.Laatste = Field{0, true}
 		state.Terug = Field{0, true}
 	default: // Something is already filled in for today
-		slog.Println(today)
+		s.log.Println(today)
 		if today.Begin != 0 {
 			state.Begin.Value = today.Begin
 		} else {
@@ -238,31 +246,31 @@ func fieldAllowed(method string) bool {
 	return false
 }
 
-func overviewHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	category := vars["category"]
 	month, err := strconv.ParseInt(vars["month"], 10, 64)
 	if err != nil {
 		http.Error(w, "invalid month", 400)
-		slog.Println("overview:", err)
+		s.log.Println("overview:", err)
 		return
 	}
 	year, err := strconv.ParseInt(vars["year"], 10, 64)
 	if err != nil {
 		http.Error(w, "invalid year", 400)
-		slog.Println("overview:", err)
+		s.log.Println("overview:", err)
 		return
 	}
-	slog.Println("overview", year, month)
+	s.log.Println("overview", year, month)
 
 	jsonEncoder := json.NewEncoder(w)
 	switch category {
 	case "kilometers":
 		all := make([]Kilometers, 0)
-		_, err := dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+		_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println("overview:", err)
+			s.log.Println("overview:", err)
 			return
 		}
 
@@ -275,10 +283,10 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 			Hours                   int
 		}
 		columns := make([]Column, 0)
-		_, err := dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+		_, err := s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println("overview:", err)
+			s.log.Println("overview:", err)
 			return
 		}
 		for _, c := range all {
@@ -293,16 +301,25 @@ func overviewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deleteHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	slog.Println("delete:", id)
-	_, err := dbmap.Exec("delete from kilometers where id=$1", id)
-	if err != nil {
-		http.Error(w, "Database error", 500)
-		slog.Println("delete:", err)
+	s.log.Println("delete:", id)
+	intId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil || intId < 0 {
+		http.Error(w, "Invalid id.", 500)
 		return
 	}
+	var k = &Kilometers{Id: intId}
+
+	//_, err = s.Dbmap.Exec("delete from kilometers where id=$1", id)
+	deleted, err := s.Dbmap.Delete(k)
+	if err != nil || deleted == 0 {
+		http.Error(w, "Unknown id.", 500)
+		return
+	}
+	s.log.Println("delete:", err)
+	fmt.Fprintf(w, "%d", intId)
 }
 
 func getDateStr() string {
@@ -310,19 +327,19 @@ func getDateStr() string {
 	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
 }
 
-func saveHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "could not parse request", 400)
-		slog.Println(err)
+		s.log.Println(err)
 		return
 	}
 	var pv PostValue
 	err = json.Unmarshal(body, &pv)
 	if err != nil {
 		http.Error(w, "could not parse request", 400)
-		slog.Println(err)
+		s.log.Println(err)
 		return
 	}
 
@@ -334,38 +351,38 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 		pv.Name = strings.ToLower(pv.Name)
 	}
 	if pv.Name == "eerste" {
-		go timeStamp("in")
+		go timeStamp(s, "in")
 	} else if pv.Name == "laatste" {
-		go timeStamp("out")
+		go timeStamp(s, "out")
 	}
 
 	dateStr := getDateStr()
-	id, err := dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
+	id, err := s.Dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
 
 	//today := new(Kilometers)
 	today := NewKilometers()
 	if id == 0 { // nothing saved for today, save posted data and date
 		today.addPost(pv)
-		slog.Println(today)
-		err = dbmap.Insert(today)
+		s.log.Println(today)
+		err = s.Dbmap.Insert(today)
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println(err)
+			s.log.Println(err)
 			return
 		}
 	} else { // update already partially saved day
-		err = dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
-		//today, err = dbmap.Get(Kilometers{}, id)
+		err = s.Dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
+		//today, err = s.Dbmap.Get(Kilometers{}, id)
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println(err)
+			s.log.Println(err)
 			return
 		}
 		today.addPost(pv)
-		_, err = dbmap.Update(today)
+		_, err = s.Dbmap.Update(today)
 		if err != nil {
 			http.Error(w, "Database error", 500)
-			slog.Println(err)
+			s.log.Println(err)
 			return
 		}
 	}

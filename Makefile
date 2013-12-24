@@ -4,7 +4,6 @@ app/km: app/km.go
 .PHONY: test-run
 test-run: app/km
 	-pkill km
-	go test ./app
 	cp ./config-testing.yml app/config.yml
 	cd app && ./km &
 

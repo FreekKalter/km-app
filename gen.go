@@ -13,9 +13,17 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var dbmap *gorp.DbMap
-var startDate, endDate string
-var km int
+var (
+	dbmap              *gorp.DbMap
+	startDate, endDate string
+	km                 int
+)
+
+const (
+	month      = time.Hour * time.Duration(720)
+	day        = time.Hour * time.Duration(24)
+	dateFormat = "02-01-2006"
+)
 
 type Kilometers struct {
 	Id                            int64
@@ -25,21 +33,21 @@ type Kilometers struct {
 }
 
 func init() {
-	db, err := sql.Open("postgres", "user=docker dbname=km password=docker sslmode=disable")
+	rand.Seed(time.Now().UnixNano())
+	flag.StringVar(&startDate, "from", time.Now().Add(-month).Format(dateFormat), "start date")
+	flag.StringVar(&endDate, "to", time.Now().Add(-day).Format(dateFormat), "end date")
+	flag.IntVar(&km, "start", 14000, "number of kilometers to start with")
+	dbName := flag.String("db", "km", "database to use")
+	flag.Parse()
+
+	db, err := sql.Open("postgres", "user=docker dbname="+*dbName+" password=docker sslmode=disable")
 	if err != nil {
 		log.Fatal("dberror: ", err)
 	}
 	dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
 	dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
-
-	rand.Seed(time.Now().UnixNano())
-	flag.StringVar(&startDate, "from", "01-11-2013", "start date")
-	flag.StringVar(&endDate, "to", "01-12-2013", "end date")
-	flag.IntVar(&km, "start", 14000, "number of kilometers to start with")
-	flag.Parse()
 }
 func main() {
-	const dateFormat = "02-01-2006"
 	start, err := time.Parse(dateFormat, startDate)
 	if err != nil {
 		log.Fatal("startDate:", err)
