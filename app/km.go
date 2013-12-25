@@ -237,15 +237,6 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func fieldAllowed(method string) bool {
-	for _, v := range []string{"Begin", "Eerste", "Laatste", "Terug"} {
-		if v == method {
-			return true
-		}
-	}
-	return false
-}
-
 func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	category := vars["category"]
@@ -331,7 +322,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "could not parse request", 400)
+		http.Error(w, "could not read request", 400)
 		s.log.Println(err)
 		return
 	}
@@ -344,12 +335,20 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// sanitize columns
-	if !fieldAllowed(pv.Name) {
+	san := func(method string) bool {
+		for _, v := range []string{"Begin", "Eerste", "Laatste", "Terug"} {
+			if method == v {
+				return true
+			}
+
+		}
+		return false
+	}
+	if !san(pv.Name) {
 		http.Error(w, "Unknown fieldname to save ", 400)
 		return
-	} else {
-		pv.Name = strings.ToLower(pv.Name)
 	}
+	pv.Name = strings.ToLower(pv.Name)
 	if pv.Name == "eerste" {
 		go timeStamp(s, "in")
 	} else if pv.Name == "laatste" {

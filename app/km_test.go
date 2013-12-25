@@ -19,12 +19,11 @@ type response struct {
 	code int
 }
 
-func clearTable(tableName string) {
-	db.Exec("truncate kilometers")
-}
-
-func TestDelete(t *testing.T) {
-	clearTable("kilometers")
+func clearTable(t *testing.T, tableName string) {
+	_, err := db.Exec("truncate kilometers")
+	if err != nil {
+		t.Fatal("truncating db: ", err)
+	}
 	slice, err := db.Select(Kilometers{}, "select * from kilometers")
 	if len(slice) > 0 {
 		t.Errorf("expected empty kilometers table to start with")
@@ -32,15 +31,13 @@ func TestDelete(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not select from kilometers")
 	}
-	var table map[string]response = map[string]response{
-		"/delete/1":  response{"Unknown id.", 500},
-		"/delete/a":  response{"Invalid id.", 500},
-		"/delete/-1": response{"Invalid id.", 500},
-	}
-	for url, resp := range table {
-		r, _ := http.NewRequest("GET", url, nil)
+}
+
+func tableDrivenTest(t *testing.T, table []*TestCombo) {
+	for _, tc := range table {
 		w := httptest.NewRecorder()
-		s.ServeHTTP(w, r)
+		s.ServeHTTP(w, tc.req)
+		resp := tc.resp
 
 		if b := w.Body.String(); !strings.Contains(b, resp.body) {
 			t.Fatalf("body = %q, want '%s'", b, resp.body)
@@ -49,5 +46,40 @@ func TestDelete(t *testing.T) {
 			t.Fatalf("code = %d, want %d", w.Code, resp.code)
 		}
 	}
+}
 
+type TestCombo struct {
+	req  *http.Request
+	resp response
+}
+
+func NewTestCombo(url string, resp response) *TestCombo {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		panic(err)
+	}
+	return &TestCombo{req, resp}
+}
+
+func TestDelete(t *testing.T) {
+	clearTable(t, "kilometers")
+
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/delete/1", response{"Unknown id.", 500}),
+		NewTestCombo("/delete/a", response{"Invalid id.", 500}),
+		NewTestCombo("/delete/-1", response{"Invalid id.", 500}),
+	}
+	tableDrivenTest(t, table)
+}
+
+func TestSave(t *testing.T) {
+	clearTable(t, "kilometers")
+
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/save/a", response{"404 page not found\n", 404}),
+	}
+	req, _ := http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
+	table = append(table, &TestCombo{req, response{"ok", 200}})
+
+	tableDrivenTest(t, table)
 }
