@@ -180,6 +180,11 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	if id == "today" {
 		err = s.Dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
 	} else {
+		if _, err := strconv.ParseInt(id, 10, 64); err != nil {
+			http.Error(w, InvalidId.Body, InvalidId.Code)
+			return
+		}
+
 		err = s.Dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
 	}
 	switch {
@@ -231,10 +236,8 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			state.Terug.Value = today.Terug
 		}
 	}
-
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(state)
-
 }
 
 func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
@@ -242,13 +245,13 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	category := vars["category"]
 	month, err := strconv.ParseInt(vars["month"], 10, 64)
 	if err != nil {
-		http.Error(w, "invalid month", 400)
+		http.Error(w, InvalidUrl.Body, InvalidUrl.Code)
 		s.log.Println("overview:", err)
 		return
 	}
 	year, err := strconv.ParseInt(vars["year"], 10, 64)
 	if err != nil {
-		http.Error(w, "invalid year", 400)
+		http.Error(w, InvalidUrl.Body, InvalidUrl.Code)
 		s.log.Println("overview:", err)
 		return
 	}
@@ -289,6 +292,9 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 			columns = append(columns, col)
 		}
 		jsonEncoder.Encode(columns)
+	default:
+		http.Error(w, InvalidUrl.Body, InvalidUrl.Code)
+		return
 	}
 }
 
@@ -298,7 +304,7 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	s.log.Println("delete:", id)
 	intId, err := strconv.ParseInt(id, 10, 64)
 	if err != nil || intId < 0 {
-		http.Error(w, "Invalid id.", 500)
+		http.Error(w, InvalidId.Body, InvalidId.Code)
 		return
 	}
 	var k = &Kilometers{Id: intId}
@@ -306,11 +312,11 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	//_, err = s.Dbmap.Exec("delete from kilometers where id=$1", id)
 	deleted, err := s.Dbmap.Delete(k)
 	if err != nil || deleted == 0 {
-		http.Error(w, "Unknown id.", 500)
+		http.Error(w, InvalidId.Body, InvalidId.Code)
 		return
 	}
 	s.log.Println("delete:", err)
-	fmt.Fprintf(w, "%d", intId)
+	fmt.Fprintf(w, "%d\n", intId)
 }
 
 func getDateStr() string {
@@ -322,14 +328,14 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "could not read request", 400)
+		http.Error(w, NotParsable.Body, NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
 	var pv PostValue
 	err = json.Unmarshal(body, &pv)
 	if err != nil {
-		http.Error(w, "could not parse request", 400)
+		http.Error(w, NotParsable.Body, NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
@@ -340,12 +346,11 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 			if method == v {
 				return true
 			}
-
 		}
 		return false
 	}
 	if !san(pv.Name) {
-		http.Error(w, "Unknown fieldname to save ", 400)
+		http.Error(w, UnknownField.Body, UnknownField.Code)
 		return
 	}
 	pv.Name = strings.ToLower(pv.Name)
@@ -365,7 +370,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		s.log.Println(today)
 		err = s.Dbmap.Insert(today)
 		if err != nil {
-			http.Error(w, "Database error", 500)
+			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
@@ -373,19 +378,19 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		err = s.Dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
 		//today, err = s.Dbmap.Get(Kilometers{}, id)
 		if err != nil {
-			http.Error(w, "Database error", 500)
+			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
 		today.addPost(pv)
 		_, err = s.Dbmap.Update(today)
 		if err != nil {
-			http.Error(w, "Database error", 500)
+			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
 	}
-	fmt.Fprintf(w, "ok")
+	fmt.Fprintf(w, "ok\n")
 }
 
 func cacheHandler(h http.Handler, days int) http.Handler {
