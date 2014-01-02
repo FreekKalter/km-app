@@ -24,7 +24,7 @@ def remoteDeploy():
     run("docker run -cidfile={}\
                      -v /home/fkalter/km/postgresdata:/data:rw\
                      -v /home/fkalter/km/log:/log\
-                     -d -p 4001:4001\
+                     -d -p 4001:4001 -p 5432:5432\
                      freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
 
 # Rollback excepts a excact buildnumber or a negative offset to rollback that number builds
@@ -43,4 +43,3 @@ def rollback():
                      -v /home/fkalter/km/log:/log\
                      -d -p 4001:4001\
                      freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
-
