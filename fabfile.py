@@ -38,3 +38,8 @@ def runBuildNr(buildNumber):
                     -v /home/fkalter/km/log:/log\
                     -d -p 4001:4001 \
                     freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
+
+def backup():
+    buildNr = run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1")
+    run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(buildNr))
+    get('/home/fkalter/backup/backup.sql', '.')

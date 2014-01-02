@@ -28,7 +28,7 @@ run-local-production: prepare-production
 	docker build -t freekkalter/km:deploy .
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
 				       -v /home/fkalter/github/km/log:/log:rw\
-				       -d -p 4001:4001 -p 5432:5432\
+				       -d -p 4001:4001 \
 				       freekkalter/km:deploy /usr/bin/supervisord
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
