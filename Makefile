@@ -1,5 +1,5 @@
 app/km: app/km.go
-	go build -o app/km app/km.go app/kilometers.go
+	go build -o app/km app/km.go app/kilometers.go app/errors.go
 
 .PHONY: test-run
 test-run: app/km
@@ -12,9 +12,9 @@ start-postgres:
 	docker kill `cat .cidfile`
 	rm .cidfile
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
-								   -v /home/fkalter/github/km/log:/log:rw\
-								   -d -p 5432:5432\
-								   freekkalter/postgres-supervisord:km /usr/bin/supervisord
+				       -v /home/fkalter/github/km/log:/log:rw\
+				       -d -p 5432:5432\
+				       freekkalter/postgres-supervisord:km /usr/bin/supervisord
 
 .PHONY: prepare-production
 prepare-production: app/km minify
@@ -27,9 +27,9 @@ run-local-production: prepare-production
 	rm .cidfile
 	docker build -t freekkalter/km:deploy .
 	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
-								   -v /home/fkalter/github/km/log:/log:rw\
-								   -d -p 4001:4001 -p 5432:5432\
-								   freekkalter/km:deploy /usr/bin/supervisord
+				       -v /home/fkalter/github/km/log:/log:rw\
+				       -d -p 4001:4001 -p 5432:5432\
+				       freekkalter/km:deploy /usr/bin/supervisord
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
 # suffix will be ignored.
