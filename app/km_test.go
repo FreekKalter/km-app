@@ -137,5 +137,23 @@ func TestOverview(t *testing.T) {
 		NewTestCombo("/overview/1/2013/01", InvalidUrl),
 	}
 	tableDrivenTest(t, table)
+}
 
+func BenchmarkSave(b *testing.B) {
+	req, _ := http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
+	w := httptest.NewRecorder()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.ServeHTTP(w, req)
+	}
+}
+
+func BenchmarkOverview(b *testing.B) {
+	//req, _ := http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
+	req, _ := http.NewRequest("GET", "/overview/kilometers/2013/12", nil)
+	w := httptest.NewRecorder()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.ServeHTTP(w, req)
+	}
 }
