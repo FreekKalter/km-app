@@ -263,7 +263,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		all := make([]Kilometers, 0)
 		_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			http.Error(w, "Database error", 500)
+			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println("overview:", err)
 			return
 		}
@@ -274,12 +274,12 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		var all []Times
 		type Column struct {
 			Date, CheckIn, CheckOut time.Time
-			Hours                   int
+			Hours                   float64
 		}
 		columns := make([]Column, 0)
 		_, err := s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			http.Error(w, "Database error", 500)
+			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println("overview:", err)
 			return
 		}
@@ -288,7 +288,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 			col.Date = c.Date
 			col.CheckIn = time.Unix(c.CheckIn, 0)
 			col.CheckOut = time.Unix(c.CheckOut, 0)
-			col.Hours = int((time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours())
+			col.Hours = (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours()
 			columns = append(columns, col)
 		}
 		jsonEncoder.Encode(columns)
