@@ -23,10 +23,11 @@ prepare-production: app/km minify
 .PHONY: run-local-production
 run-local-production: prepare-production
 	-pkill km
-	docker kill `cat .cidfile`
-	rm .cidfile
-	docker build -t freekkalter/km:deploy .
-	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
+	-docker kill `cat .cidfile`
+	-rm .cidfile
+	-docker build -t freekkalter/km:deploy .
+	-docker rm km_production
+	docker run -name km_production -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
 				       -v /home/fkalter/github/km/log:/log:rw\
 				       -d -p 4001:4001 \
 				       freekkalter/km:deploy /usr/bin/supervisord

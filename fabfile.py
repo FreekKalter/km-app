@@ -3,7 +3,8 @@ import os
 
 env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
-env.hosts.extend( ['fkalter@km-app.dyndns.org'])
+env.hosts.extend(['fkalter@km-app.dyndns.org'])
+
 
 def deploy():
     prepareDeploy()
@@ -22,8 +23,7 @@ def remoteDeploy():
 
 def rollback():
     # find latest buildnumber on remote, default = the build before the last one
-    bn = int(run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1"))
-    buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=bn-1))
+    buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=getLatestBuildNr()-1))
     if buildNumber < 0:
         buildNumber = bn+buildNumber
     runBuildNr(buildNumber)
@@ -39,13 +39,23 @@ def runBuildNr(buildNumber):
                     -d -p 4001:4001 \
                     freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
 
-def getSqlDump():
-    buildNr = run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1")
-    run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(buildNr))
-    get('/home/fkalter/backup/backup.sql', '.')
+def getSqlDump(directory):
+    run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))
+    get('/home/fkalter/backup/backup.sql', directory)
 
+def pullProductionData():
+    local('mkdir -p backup')
+    getSqlDump('./backup')
+
+    # import into local running container
+    local('docker run -v /home/fkalter/github/km/backup:/backup:rw -link km_production:main freekkalter/km:deploy /restore.sh')
+
+# call backup from cronjob/jenkins
 def backup():
-    getSqlDump()
+    getSqlDump('.')
     # tar file and move to folder with format backup-{date}.sql
-    # call backup from cronjob/jenkins
+    local("tar -czf ~/km-backup/backup_`date +%d-%m-%Y.tar.gz` ./backup.sql")
+    local("rm ./backup.sql")
 
+def getLatestBuildNr():
+    return int(run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1"))
