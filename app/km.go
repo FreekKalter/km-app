@@ -267,9 +267,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 			s.log.Println("overview:", err)
 			return
 		}
-
 		jsonEncoder.Encode(all)
-
 	case "tijden":
 		var all []Times
 		type Column struct {

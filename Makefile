@@ -1,5 +1,5 @@
 app/km: app/km.go
-	go build -o app/km app/km.go app/kilometers.go app/errors.go
+	go build -o app/km app/km.go app/kilometers.go app/errors.go app/db.go
 
 .PHONY: test-run
 test-run: app/km

@@ -39,7 +39,13 @@ def runBuildNr(buildNumber):
                     -d -p 4001:4001 \
                     freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
 
-def backup():
+def getSqlDump():
     buildNr = run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1")
     run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(buildNr))
     get('/home/fkalter/backup/backup.sql', '.')
+
+def backup():
+    getSqlDump()
+    # tar file and move to folder with format backup-{date}.sql
+    # call backup from cronjob/jenkins
+
