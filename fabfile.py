@@ -54,6 +54,7 @@ def pullProductionData():
 def backup():
     getSqlDump('.')
     # tar file and move to folder with format backup-{date}.sql
+    local('mkdir -p ~/km-backup')
     local("tar -czf ~/km-backup/backup_`date +%d-%m-%Y.tar.gz` ./backup.sql")
     local("rm ./backup.sql")
 

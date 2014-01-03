@@ -9,3 +9,5 @@ app/config.yml
 gen
 app/app.test
 backup.sql
+backup.log
+
