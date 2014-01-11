@@ -3,12 +3,15 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"net"
 
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/fcgi"
+
 	"os"
 	"strconv"
 	"strings"
@@ -94,8 +97,8 @@ func main() {
 	http.Handle("/", s)
 	s.log.Printf("started... (%s)\n", config.Env)
 
-	// wrap the whole mux router wich implements http.Handler in a gzip middleware
-	http.ListenAndServe(":4001", s)
+	listener, _ := net.Listen("tcp", "127.0.0.1:4001")
+	fcgi.Serve(listener, s)
 }
 
 type Config struct {
