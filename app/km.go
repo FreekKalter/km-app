@@ -97,8 +97,12 @@ func main() {
 	http.Handle("/", s)
 	s.log.Printf("started... (%s)\n", config.Env)
 
-	listener, _ := net.Listen("tcp", "127.0.0.1:4001")
-	fcgi.Serve(listener, s)
+	listener, _ := net.Listen("tcp", ":4001")
+	if config.Env == "testing" {
+		http.Serve(listener, nil)
+	} else {
+		fcgi.Serve(listener, nil)
+	}
 }
 
 type Config struct {

@@ -20,6 +20,7 @@ def remoteDeploy():
     buildNumber = os.environ['BUILD_NUMBER']
     run("docker pull freekkalter/km")
     runBuildNr(buildNumber)
+    # run nginx container
 
 def rollback():
     # find latest buildnumber on remote, default = the build before the last one
