@@ -20,7 +20,6 @@ def remoteDeploy():
     buildNumber = os.environ['BUILD_NUMBER']
     run("docker pull freekkalter/km")
     runBuildNr(buildNumber)
-    # run nginx container
 
 def rollback():
     # find latest buildnumber on remote, default = the build before the last one
@@ -31,6 +30,7 @@ def rollback():
 
 def runBuildNr(buildNumber):
     cidfile = '/home/fkalter/.km.cidfile'
+    nginxCidfile = '/home/fkalter/.nginx.cidfile'
     run("docker kill `cat {}`".format(cidfile))
     run("rm {}".format(cidfile))
     run("docker rm km_production")
@@ -39,6 +39,12 @@ def runBuildNr(buildNumber):
                     -v /home/fkalter/km/log:/log\
                     -d -p 4001:4001 \
                     freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
+
+    run("docker kill `cat .nginx.cidfile`")
+    run("rm {}".format(nginxCidfile))
+    run("docker run -d -p 443:443 -link km_production:app -cidfile={} \
+                       -v /home/fkalter/ssl:/etc/nginx/conf:ro \
+                       freekkalter/nginx:start_nginx /start_nginx".format(nginxCidfile))
 
 def getSqlDump(directory):
     run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))

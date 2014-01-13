@@ -2,7 +2,7 @@ app/km
 log
 postgresdata
 *.pyc
-.cidfile
+*.cidfile
 *.min.*
 app/js/combined*
 app/config.yml

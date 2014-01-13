@@ -90,7 +90,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	s := NewServer("km", config)
 	defer s.Dbmap.Db.Close()
 
