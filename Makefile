@@ -78,7 +78,7 @@ app/js/angular-combined.anno.js: app/js/angular-combined.js
 	ngmin app/js/angular-combined.js app/js/angular-combined.anno.js
 
 app/js/angular-combined.anno.min.js: app/js/angular-combined.anno.js
-	$(YUI_COMPRESSOR) $(YUI_COMPRESSOR_FLAGS) --type js app/js/angular-combined.anno.js > app/js/angular-combined.anno.min.js
+	-$(YUI_COMPRESSOR) $(YUI_COMPRESSOR_FLAGS) --type js app/js/angular-combined.anno.js > app/js/angular-combined.anno.min.js
 
 app/js/master.js: app/js/angular-combined.anno.min.js
 	cat app/js/jquery.min.js\
@@ -95,5 +95,5 @@ app/js/master.js: app/js/angular-combined.anno.min.js
 clean:
 	rm -f $(CSS_MINIFIED)
 	rm -f app/km
-	rm -f app/js/*.min.js
-	rm -f app/js/combined*.js
+	rm -f app/js/angular-combined*
+	rm -f app/js/master.js
