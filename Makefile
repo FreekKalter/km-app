@@ -23,6 +23,7 @@ prepare-production: app/km minify
 .PHONY:
 build-production: Dockerfile
 	docker build -t freekkalter/km:deploy .
+	docker build -t freekkalter/nginx:deploy nginx
 
 .PHONY: run-local-production
 run-local-production: prepare-production
@@ -38,7 +39,8 @@ run-local-production: prepare-production
 	-rm .nginx.cidfile
 	docker run -d -p 443:443 -link km_production:app -cidfile=./.nginx.cidfile \
 			   -v /home/fkalter/nginx/ssl:/etc/nginx/conf:ro \
-			   freekkalter/nginx:start_nginx /start_nginx
+			   -v /home/fkalter/github/km/app:/static:ro\
+			   freekkalter/nginx:deploy /start_nginx
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
 # suffix will be ignored.
@@ -66,16 +68,27 @@ minify-css: $(CSS_FILES) $(CSS_MINIFIED)
 	@echo
 
 # target: minify-js - Minifies JS.
-minify-js: app/js/combined.anno.js app/js/combined.anno.min.js
+#minify-js: app/js/angular-combined.anno.js app/js/angular-combined.anno.min.js app/js/master.js
+minify-js: app/js/master.js
 
-app/js/combined.js: app/js/app.js app/js/controller.js
-	cat app/js/app.js app/js/controller.js app/js/animations.js > app/js/combined.js
+app/js/angular-combined.js: app/js/app.js app/js/controller.js  app/js/animations.js
+	cat app/js/app.js app/js/controller.js app/js/animations.js > app/js/angular-combined.js
 
-app/js/combined.anno.js: app/js/combined.js
-	ngmin app/js/combined.js app/js/combined.anno.js
+app/js/angular-combined.anno.js: app/js/angular-combined.js
+	ngmin app/js/angular-combined.js app/js/angular-combined.anno.js
 
-app/js/combined.anno.min.js: app/js/combined.anno.js
-	$(YUI_COMPRESSOR) $(YUI_COMPRESSOR_FLAGS) --type js app/js/combined.anno.js > app/js/combined.anno.min.js
+app/js/angular-combined.anno.min.js: app/js/angular-combined.anno.js
+	$(YUI_COMPRESSOR) $(YUI_COMPRESSOR_FLAGS) --type js app/js/angular-combined.anno.js > app/js/angular-combined.anno.min.js
+
+app/js/master.js: app/js/angular-combined.anno.min.js
+	cat app/js/jquery.min.js\
+		app/js/angular.min.js\
+		app/js/angular-route.min.js\
+		app/js/angular-animate.min.js\
+		app/js/ui-bootstrap-custom-tpls-0.7.0.Minimale.min.js\
+		app/js/angular-combined.anno.min.js\
+		> app/js/master.js
+
 
 # target: clean - Removes minified CSS and JS files.
 .PHONY: clean

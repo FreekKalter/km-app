@@ -66,6 +66,14 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
     //      - second time desired tab is also in url -> now fetch data from backend and render it
     //          (like on an initial page load)
     //
+    // Activate tab based on url
+    if($routeParams.category === 'kilometers'){
+        $scope.kiloActive = true;
+    }
+    if($routeParams.category === 'tijden'){
+        $scope.timesActive = true;
+    }
+
     $scope.loadData = function(category){
         var path = [ 'overview', category, $routeParams.year, $routeParams.month].join('/');
         if(category === $routeParams.category){
@@ -82,14 +90,6 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
             $location.path(path);
         }
     };
-
-    // Activate tab based on url
-    if($routeParams.category === 'kilometers'){
-        $scope.kiloActive = true;
-    }
-    if($routeParams.category === 'tijden'){
-        $scope.timesActive = true;
-    }
 
     $scope.deleteRow = function(index){
         $http.get('delete/' + $scope.kilometers[index].Id ).success(function(data){

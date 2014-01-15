@@ -10,4 +10,7 @@ gen
 app/app.test
 backup.sql
 backup.log
+app/js/*master*
+app/js/*combined*
+app/css/*master*
 
