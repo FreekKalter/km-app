@@ -64,12 +64,7 @@ func NewServer(dbName string, config Config) *Server {
 	s := &Server{Dbmap: Dbmap, templates: templates, log: slog, config: config}
 
 	// static files get served directly
-	s.PathPrefix("/js/").Handler(http.StripPrefix("/js/", cacheHandler(http.FileServer(http.Dir("js/")), 30)))
-	s.PathPrefix("/img/").Handler(http.StripPrefix("/img/", cacheHandler(http.FileServer(http.Dir("img/")), 30)))
-	s.PathPrefix("/css/").Handler(http.StripPrefix("/css/", cacheHandler(http.FileServer(http.Dir("css/")), 30)))
-	s.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", cacheHandler(http.FileServer(http.Dir("partials/")), 30)))
-
-	s.Handle("/favicon.ico", cacheHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "favicon.ico") }), 40))
+	s.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", http.FileServer(http.Dir("partials/"))))
 
 	s.HandleFunc("/", s.homeHandler).Methods("GET")
 	s.HandleFunc("/state/{id}", s.stateHandler).Methods("GET")
@@ -395,14 +390,4 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Fprintf(w, "ok\n")
-}
-
-func cacheHandler(h http.Handler, days int) http.Handler {
-	dur := time.Duration(days) * time.Duration(24) * time.Hour
-	// ourHandler implements the http.Handler interface
-	ourHandler := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", int64(dur.Seconds())))
-		h.ServeHTTP(w, r)
-	}
-	return http.HandlerFunc(ourHandler)
 }
