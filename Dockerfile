@@ -3,7 +3,6 @@ FROM freekkalter/postgres-supervisord:km
 ADD app /app
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-
 ADD pgpass /pgpass
 RUN chmod 0600 /pgpass
 

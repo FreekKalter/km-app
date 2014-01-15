@@ -39,7 +39,6 @@ run-local-production: prepare-production
 	-rm .nginx.cidfile
 	docker run -d -p 443:443 -link km_production:app -cidfile=./.nginx.cidfile \
 			   -v /home/fkalter/nginx/ssl:/etc/nginx/conf:ro \
-			   -v /home/fkalter/github/km/app:/static:ro\
 			   freekkalter/nginx:deploy /start_nginx
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
@@ -65,11 +64,11 @@ minify-css: $(CSS_FILES) $(CSS_MINIFIED)
 %.min.css: %.css
 	@echo '==> Minifying $<'
 	$(YUI_COMPRESSOR) $(YUI_COMPRESSOR_FLAGS) --type css $< >$@
-	@echo
+	cp $@ nginx
 
 # target: minify-js - Minifies JS.
 #minify-js: app/js/angular-combined.anno.js app/js/angular-combined.anno.min.js app/js/master.js
-minify-js: app/js/master.js
+minify-js: nginx/master.js
 
 app/js/angular-combined.js: app/js/app.js app/js/controller.js  app/js/animations.js
 	cat app/js/app.js app/js/controller.js app/js/animations.js > app/js/angular-combined.js
@@ -80,14 +79,14 @@ app/js/angular-combined.anno.js: app/js/angular-combined.js
 app/js/angular-combined.anno.min.js: app/js/angular-combined.anno.js
 	-$(YUI_COMPRESSOR) $(YUI_COMPRESSOR_FLAGS) --type js app/js/angular-combined.anno.js > app/js/angular-combined.anno.min.js
 
-app/js/master.js: app/js/angular-combined.anno.min.js
+nginx/master.js: app/js/angular-combined.anno.min.js
 	cat app/js/jquery.min.js\
 		app/js/angular.min.js\
 		app/js/angular-route.min.js\
 		app/js/angular-animate.min.js\
 		app/js/ui-bootstrap-custom-tpls-0.7.0.Minimale.min.js\
 		app/js/angular-combined.anno.min.js\
-		> app/js/master.js
+		> nginx/master.js
 
 
 # target: clean - Removes minified CSS and JS files.
@@ -96,4 +95,4 @@ clean:
 	rm -f $(CSS_MINIFIED)
 	rm -f app/km
 	rm -f app/js/angular-combined*
-	rm -f app/js/master.js
+	rm -f nginx/master.js
