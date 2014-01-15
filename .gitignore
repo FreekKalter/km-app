@@ -3,7 +3,6 @@ log
 postgresdata
 *.pyc
 *.cidfile
-*.min.*
 app/js/combined*
 app/config.yml
 gen
@@ -14,3 +13,4 @@ app/js/*master*
 app/js/*combined*
 app/css/*master*
 nginx/master.js
+*.min.css
