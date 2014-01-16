@@ -12,7 +12,9 @@ def deploy():
 
 def prepareDeploy():
     buildNumber = os.environ['BUILD_NUMBER']
-    local("make prepare-production build-production")
+    local("make prepare-production")
+    local("docker build -t freekkalter/km:{} .".format(buildNumber))
+    local("docker build -t freekkalter/nginx:deploy nginx")
     local("docker push freekkalter/km")
     local("docker push freekkalter/nginx")
 
