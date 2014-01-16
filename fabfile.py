@@ -30,23 +30,19 @@ def rollback():
         buildNumber = bn+buildNumber
     runBuildNr(buildNumber)
 
-def runBuildNr(buildNumber):
-    cidfile = '/home/fkalter/.km.cidfile'
-    nginxCidfile = '/home/fkalter/.nginx.cidfile'
-    run("docker kill `cat {}`".format(cidfile))
-    run("rm {}".format(cidfile))
+def runBuildNr(buildName):
+    run("docker kill km_production")
     run("docker rm km_production")
-    run("docker run -name km_production -cidfile={}\
+    run("docker run -name km_production \
                     -v /home/fkalter/km/postgresdata:/data:rw\
                     -v /home/fkalter/km/log:/log\
                     -d -p 4001:4001 \
-                    freekkalter/km:{} /usr/bin/supervisord".format(cidfile, buildNumber))
+                    freekkalter/km:{} /usr/bin/supervisord".format(buildName))
 
-    run("docker kill `cat .nginx.cidfile`")
-    run("rm {}".format(nginxCidfile))
-    run("docker run -d -p 443:443 -link km_production:app -cidfile={} \
+    run("docker kill nginx")
+    run("docker run -d -p 443:443 -link km_production:app -name nginx\
                        -v /home/fkalter/ssl:/etc/nginx/conf:ro \
-                       freekkalter/nginx:start_nginx /start_nginx".format(nginxCidfile))
+                       freekkalter/nginx:start_nginx /start_nginx")
 
 def getSqlDump(directory):
     run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))
