@@ -21,7 +21,8 @@ def prepareDeploy():
 def remoteDeploy():
     buildNumber = os.environ['BUILD_NUMBER']
     run("docker pull freekkalter/km")
-    runBuildNr(buildNumber)
+    #runBuildNr(buildNumber)
+    runProduction(True, buildNumber)
 
 def rollback():
     # find latest buildnumber on remote, default = the build before the last one
@@ -29,6 +30,28 @@ def rollback():
     if buildNumber < 0:
         buildNumber = bn+buildNumber
     runBuildNr(buildNumber)
+
+def runProduction(remote, buildName):
+    commands = [
+        {'command': "docker kill km_production" , 'arguments':{"quiet":True}},
+        {'command': "docker rm km_production" , 'arguments':{"quiet":True}},
+        {'command': "docker run -name km_production \
+                               -v /home/fkalter/km/postgresdata:/data:rw\
+                               -v /home/fkalter/km/log:/log\
+                               -d -p 4001:4001 \
+                               freekkalter/km:{} /usr/bin/supervisord".format(buildName) , 'arguments':{}},
+
+        {'command': "docker kill nginx" , 'arguments':{"quiet":True}},
+        {'command': "docker rm nginx" , 'arguments':{"quiet":True}},
+        {'command': "docker run -d -p 443:443 -link km_production:app -name nginx\
+                                  -v /home/fkalter/ssl:/etc/nginx/conf:ro \
+                                  freekkalter/nginx:start_nginx /start_nginx", 'arguments':{} }]
+    for c in commands:
+        if remote:
+            run(c['command'], **(c['arguments']))
+        else:
+            local(c['command'], **(c['arguments']))
+
 
 def runBuildNr(buildName):
     run("docker kill km_production", quiet=True)
