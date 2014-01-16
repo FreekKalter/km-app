@@ -45,7 +45,7 @@ def runProduction(remote, buildName):
         {'command': "docker rm nginx" , 'arguments':{"quiet":True}},
         {'command': "docker run -d -p 443:443 -link km_production:app -name nginx\
                                   -v /home/fkalter/ssl:/etc/nginx/conf:ro \
-                                  freekkalter/nginx:start_nginx /start_nginx", 'arguments':{} }]
+                                  freekkalter/nginx:deploy /start_nginx", 'arguments':{} }]
     for c in commands:
         if remote:
             run(c['command'], **(c['arguments']))
