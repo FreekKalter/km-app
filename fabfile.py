@@ -31,15 +31,16 @@ def rollback():
     runBuildNr(buildNumber)
 
 def runBuildNr(buildName):
-    run("docker kill km_production")
-    run("docker rm km_production")
+    run("docker kill km_production", quiet=True)
+    run("docker rm km_production", quit=True)
     run("docker run -name km_production \
                     -v /home/fkalter/km/postgresdata:/data:rw\
                     -v /home/fkalter/km/log:/log\
                     -d -p 4001:4001 \
                     freekkalter/km:{} /usr/bin/supervisord".format(buildName))
 
-    run("docker kill nginx")
+    run("docker kill nginx", quiet=True)
+    run("docker rm nginx", quiet=True)
     run("docker run -d -p 443:443 -link km_production:app -name nginx\
                        -v /home/fkalter/ssl:/etc/nginx/conf:ro \
                        freekkalter/nginx:start_nginx /start_nginx")
