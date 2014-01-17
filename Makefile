@@ -16,30 +16,6 @@ start-postgres:
 				       -d -p 5432:5432\
 				       freekkalter/postgres-supervisord:km /usr/bin/supervisord
 
-.PHONY: prepare-production
-prepare-production: app/km minify
-	cp config-production.yml app/config.yml
-
-.PHONY:
-build-production: Dockerfile
-	docker build -t freekkalter/km:deploy .
-	docker build -t freekkalter/nginx:deploy nginx
-
-.PHONY: run-local-production
-run-local-production: prepare-production
-	-pkill km
-	-docker kill `cat .cidfile`
-	-rm .cidfile
-	-docker rm km_production
-	docker run -name km_production -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
-				       -v /home/fkalter/github/km/log:/log:rw\
-					   -d -p 4001:4001\
-				       freekkalter/km:deploy /usr/bin/supervisord
-	-docker kill `cat .nginx.cidfile`
-	-rm .nginx.cidfile
-	docker run -d -p 443:443 -link km_production:app -cidfile=./.nginx.cidfile \
-			   -v /home/fkalter/nginx/ssl:/etc/nginx/conf:ro \
-			   freekkalter/nginx:deploy /start_nginx
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
 # suffix will be ignored.
