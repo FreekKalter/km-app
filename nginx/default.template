@@ -19,22 +19,22 @@ server {
 
 	add_header Strict-Transport-Security max-age=15768000;
 
-    gzip            on;
-    gzip_proxied    any;
-    gzip_types      *;
-    #gzip_comp_level 8;
+        gzip            on;
+        gzip_proxied    any;
+        gzip_types      *;
+        #gzip_comp_level 8;
 
-    location /favicon {
-        root /static;
-    }
+        location /favicon {
+            root /static;
+        }
 
-    location /js/ {
-        root /static;
-    }
+        location /js/ {
+            root /static;
+        }
 
-    location /css/ {
-        root /static;
-    }
+        location /css/ {
+            root /static;
+        }
 
 	location / {
 		#try_files $uri $uri/ =404;

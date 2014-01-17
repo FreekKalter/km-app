@@ -5,8 +5,22 @@ env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
 env.hosts.extend(['fkalter@km-app.dyndns.org'])
 
+def localTest():
+    killLocalContainers(False)
+    local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
+                       -v /home/fkalter/km/log:/log:rw\
+                       -name postgres\
+                       -d -p 5432:5432\
+                       freekkalter/postgres-supervisord:km /usr/bin/supervisord')
+    local('make app/km')
+    with settings(warn_only=True):
+        local('pkill km')
+    local('cp ./config-testing.yml app/config.yml')
+    with lcd('./app'):
+        local('./km &')
+
 def localDeploy():
-    buildName = 'test'
+    buildName = 'local'
     buildContainers(buildName)
     runProduction(False, buildName)
 
@@ -27,18 +41,25 @@ def pushContainers():
     local("docker push freekkalter/km")
     local("docker push freekkalter/nginx")
 
-def runProduction(remote, buildName):
+def killLocalContainers(remote):
     if remote:
         command = run
     else:
         command = local
-
     with settings(warn_only=True):
         command("docker kill km_production")
         command("docker rm km_production")
         command("docker kill nginx")
         command("docker rm nginx")
+        command("docker kill postgres")
+        command("docker rm postgres")
 
+def runProduction(remote, buildName):
+    if remote:
+        command = run
+    else:
+        command = local
+    killLocalContainers(remote)
     command("docker run -name km_production \
                            -v /home/fkalter/km/postgresdata:/data:rw\
                            -v /home/fkalter/km/log:/log\

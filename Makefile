@@ -1,22 +1,6 @@
 app/km: app/km.go
 	go build -o app/km app/km.go app/kilometers.go app/errors.go app/db.go
 
-.PHONY: test-run
-test-run: app/km
-	-pkill km
-	cp ./config-testing.yml app/config.yml
-	cd app && ./km &
-
-.PHONY: start-postgres
-start-postgres:
-	docker kill `cat .cidfile`
-	rm .cidfile
-	docker run -cidfile=./.cidfile -v /home/fkalter/postgresdata:/data:rw\
-				       -v /home/fkalter/github/km/log:/log:rw\
-				       -d -p 5432:5432\
-				       freekkalter/postgres-supervisord:km /usr/bin/supervisord
-
-
 # Patterns matching CSS files that should be minified. Files with a .min.css
 # suffix will be ignored.
 CSS_FILES = $(filter-out %.min.css,$(wildcard \

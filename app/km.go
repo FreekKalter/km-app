@@ -64,7 +64,13 @@ func NewServer(dbName string, config Config) *Server {
 	s := &Server{Dbmap: Dbmap, templates: templates, log: slog, config: config}
 
 	// static files get served directly
-	s.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", http.FileServer(http.Dir("partials/"))))
+	if config.Env == "testing" {
+		s.PathPrefix("/js/").Handler(http.StripPrefix("/js/", http.FileServer(http.Dir("js/"))))
+		s.PathPrefix("/img/").Handler(http.StripPrefix("/img/", http.FileServer(http.Dir("img/"))))
+		s.PathPrefix("/css/").Handler(http.StripPrefix("/css/", http.FileServer(http.Dir("css/"))))
+		s.PathPrefix("/partials/").Handler(http.StripPrefix("/partials/", http.FileServer(http.Dir("partials/"))))
+		s.Handle("/favicon.ico", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, "favicon.ico") }))
+	}
 
 	s.HandleFunc("/", s.homeHandler).Methods("GET")
 	s.HandleFunc("/state/{id}", s.stateHandler).Methods("GET")
