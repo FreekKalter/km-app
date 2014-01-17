@@ -6,7 +6,7 @@ env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
 env.hosts.extend(['fkalter@km-app.dyndns.org'])
 
 def localTest():
-    killLocalContainers(False)
+    killContainers(False)
     local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
                        -v /home/fkalter/km/log:/log:rw\
                        -name postgres\
@@ -21,6 +21,8 @@ def localTest():
 
 def localDeploy():
     buildName = 'local'
+    with settings(warn_only=True):
+        local('pkill km')
     buildContainers(buildName)
     runProduction(False, buildName)
 
@@ -33,6 +35,13 @@ def deploy():
 
 def buildContainers(buildNr):
     local("make app/km minify")
+    local('mkdir -p nginx/static/js')
+    local('mkdir -p nginx/static/css')
+    local('cp app/js/master.js nginx/static/js/')
+    local('cp app/css/main.min.css nginx/static/css/')
+    local('cp app/favicon.ico nginx/static')
+    local('cp -R app/partials nginx/static')
+
     local("cp config-production.yml app/config.yml")
     local("docker build -t freekkalter/km:{} .".format(buildNr))
     local("docker build -t freekkalter/nginx:deploy nginx")
@@ -41,12 +50,12 @@ def pushContainers():
     local("docker push freekkalter/km")
     local("docker push freekkalter/nginx")
 
-def killLocalContainers(remote):
+def killContainers(remote):
     if remote:
         command = run
     else:
         command = local
-    with settings(warn_only=True):
+    with settings(hide('warnings'), warn_only=True):
         command("docker kill km_production")
         command("docker rm km_production")
         command("docker kill nginx")
@@ -59,7 +68,7 @@ def runProduction(remote, buildName):
         command = run
     else:
         command = local
-    killLocalContainers(remote)
+    killContainers(remote)
     command("docker run -name km_production \
                            -v /home/fkalter/km/postgresdata:/data:rw\
                            -v /home/fkalter/km/log:/log\

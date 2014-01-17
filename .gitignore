@@ -12,5 +12,6 @@ backup.log
 app/js/*master*
 app/js/*combined*
 app/css/*master*
-nginx/master.js
+nginx/static/*
 *.min.css
+
