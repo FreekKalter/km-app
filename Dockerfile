@@ -1,17 +1,19 @@
-FROM freekkalter/postgres-supervisord:km
+#FROM freekkalter/postgres-supervisord:km
+#ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+#
+#ADD pgpass /pgpass
+#RUN chmod 0600 /pgpass
+#
+#ADD backup.sh /backup.sh
+#RUN chmod +x /backup.sh
+#
+#ADD restore.sh /restore.sh
+#RUN chmod +x /restore.sh
+#
+#EXPOSE 5432
+#
+#CMD ["/usr/bin/supervisord"]
+
+FROM freekkalter/km:base
 
 ADD app /app
-ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-ADD pgpass /pgpass
-RUN chmod 0600 /pgpass
-
-ADD backup.sh /backup.sh
-RUN chmod +x /backup.sh
-
-ADD restore.sh /restore.sh
-RUN chmod +x /restore.sh
-
-EXPOSE 5432
-
-CMD ["/usr/bin/supervisord"]
