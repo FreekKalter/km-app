@@ -31,6 +31,7 @@ def deploy():
     buildContainers(buildNr)
     pushContainers()
     run("docker pull freekkalter/km")
+    run("docker pull freekkalter/nginx")
     runProduction(True, buildNr)
 
 def buildContainers(buildNr):
