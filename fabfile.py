@@ -4,7 +4,7 @@ import time
 
 env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
-env.hosts.extend(['fkalter@km-app.kalteronline.org'])
+env.hosts.extend(['fkalter@paris'])
 
 def localTest():
     killContainers(local)
@@ -26,8 +26,7 @@ def localDeploy():
 def deploy():
     buildNr = os.environ['BUILD_NUMBER']
     buildContainers(buildNr)
-    pushContainers()
-    run("whoami")
+    #pushContainers()
     run("docker pull freekkalter/km")
     run("docker pull freekkalter/nginx")
     runProduction(run, buildNr)
