@@ -33,13 +33,13 @@ func (k *Kilometers) getMax() int {
 
 func (k *Kilometers) addPost(pv PostValue) {
 	switch pv.Name {
-	case "begin":
+	case "Begin":
 		k.Begin = pv.Value
-	case "eerste":
+	case "Eerste":
 		k.Eerste = pv.Value
-	case "laatste":
+	case "Laatste":
 		k.Laatste = pv.Value
-	case "terug":
+	case "Terug":
 		k.Terug = pv.Value
 	}
 }

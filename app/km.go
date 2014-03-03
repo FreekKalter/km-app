@@ -53,7 +53,7 @@ func NewServer(dbName string, config Config) *Server {
 	var Dbmap *gorp.DbMap
 	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
 	Dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
-	Dbmap.AddTable(Times{}).SetKeys(true, "Id")
+	Dbmap.AddTable(Times{}).SetKeys(false, "Id")
 
 	var templates *template.Template
 	if config.Env == "testing" {
@@ -122,7 +122,7 @@ type Times struct {
 	CheckOut int64
 }
 
-func timeStamp(s *Server, action string) {
+func timeStamp(s *Server, action string, kilometersId int64) {
 	id, err := s.Dbmap.SelectInt("select Id from times where date=$1", getDateStr())
 	if err != nil {
 		s.log.Println("timestamp:", err)
@@ -132,6 +132,8 @@ func timeStamp(s *Server, action string) {
 	now := time.Now().Unix()
 	if id == 0 { // no times saved for today
 		today.Date = time.Now()
+		today.Id = kilometersId
+		s.log.Println("timestamp:", kilometersId, today.Id)
 		switch action {
 		case "in":
 			today.CheckIn = now
@@ -313,10 +315,18 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var k = &Kilometers{Id: intId}
+	var t = &Times{Id: intId}
 
 	//_, err = s.Dbmap.Exec("delete from kilometers where id=$1", id)
 	deleted, err := s.Dbmap.Delete(k)
 	if err != nil || deleted == 0 {
+		http.Error(w, InvalidId.Body, InvalidId.Code)
+		return
+	}
+	s.log.Println("delete:", deleted, "from kilometers")
+	deleted, err = s.Dbmap.Delete(t)
+	if err != nil || deleted == 0 {
+		s.log.Println("error deleting from times", deleted, err)
 		http.Error(w, InvalidId.Body, InvalidId.Code)
 		return
 	}
@@ -358,13 +368,6 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, UnknownField.Body, UnknownField.Code)
 		return
 	}
-	pv.Name = strings.ToLower(pv.Name)
-	if pv.Name == "eerste" {
-		go timeStamp(s, "in")
-	} else if pv.Name == "laatste" {
-		go timeStamp(s, "out")
-	}
-
 	dateStr := getDateStr()
 	id, err := s.Dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
 
@@ -379,21 +382,35 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 			s.log.Println(err)
 			return
 		}
+		id = today.Id
+		s.log.Println("id to be used to save Times:", id)
 	} else { // update already partially saved day
 		err = s.Dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
+		s.log.Println("saved for today:", today)
 		//today, err = s.Dbmap.Get(Kilometers{}, id)
 		if err != nil {
 			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
+		s.log.Println("post data:", pv)
 		today.addPost(pv)
+		s.log.Println("about to be saved:", today)
 		_, err = s.Dbmap.Update(today)
 		if err != nil {
 			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
+		s.log.Println("saved succeeded probably")
 	}
+	s.log.Println("id to be used to save Times:", id)
+	pv.Name = strings.ToLower(pv.Name)
+	if pv.Name == "eerste" {
+		go timeStamp(s, "in", id)
+	} else if pv.Name == "laatste" {
+		go timeStamp(s, "out", id)
+	}
+
 	fmt.Fprintf(w, "ok\n")
 }
