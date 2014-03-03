@@ -27,6 +27,7 @@ def deploy():
     buildNr = os.environ['BUILD_NUMBER']
     buildContainers(buildNr)
     pushContainers()
+    run("whoami")
     run("docker pull freekkalter/km")
     run("docker pull freekkalter/nginx")
     runProduction(run, buildNr)
