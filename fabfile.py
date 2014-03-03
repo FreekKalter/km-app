@@ -26,7 +26,7 @@ def localDeploy():
 def deploy():
     buildNr = os.environ['BUILD_NUMBER']
     buildContainers(buildNr)
-    #pushContainers()
+    pushContainers()
     run("docker pull freekkalter/km")
     run("docker pull freekkalter/nginx")
     runProduction(run, buildNr)
