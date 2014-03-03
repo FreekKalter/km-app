@@ -16,6 +16,6 @@ kmApp.config(['$routeProvider', function($routeProvider, $locationProvider){
         redirectTo: '/overview/kilometers/' + d.getFullYear() + '/' + (d.getMonth() +1)
     }).
     otherwise({
-        redirectTo: '/overview/'
+        redirectTo: '/input/today'
     });
 }]);
