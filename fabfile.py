@@ -1,30 +1,27 @@
 from fabric.api import *
 import os
+import time
 
 env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
-env.hosts.extend(['fkalter@km-app.dyndns.org'])
+env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
 def localTest():
-    killContainers(False)
+    killContainers(local)
     local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
                        -v /home/fkalter/km/log:/log:rw\
                        -name postgres\
                        -d -p 5432:5432\
                        freekkalter/postgres-supervisord:km /usr/bin/supervisord')
     local('make app/km')
-    with settings(warn_only=True):
-        local('pkill km')
     local('cp ./config-testing.yml app/config.yml')
     with lcd('./app'):
         local('./km &')
 
 def localDeploy():
     buildName = 'local'
-    with settings(warn_only=True):
-        local('pkill km')
     buildContainers(buildName)
-    runProduction(False, buildName)
+    runProduction(local, buildName)
 
 def deploy():
     buildNr = os.environ['BUILD_NUMBER']
@@ -32,7 +29,7 @@ def deploy():
     pushContainers()
     run("docker pull freekkalter/km")
     run("docker pull freekkalter/nginx")
-    runProduction(True, buildNr)
+    runProduction(run, buildNr)
 
 def buildContainers(buildNr):
     local("make app/km minify")
@@ -51,32 +48,25 @@ def pushContainers():
     local("docker push freekkalter/km")
     local("docker push freekkalter/nginx")
 
-def killContainers(remote):
-    if remote:
-        command = run
-    else:
-        command = local
+def killContainers(method):
     with settings(hide('warnings'), warn_only=True):
-        command("docker kill km_production")
-        command("docker rm km_production")
-        command("docker kill nginx")
-        command("docker rm nginx")
-        command("docker kill postgres")
-        command("docker rm postgres")
+        local('pkill km')
+        method("docker kill km_production")
+        method("docker rm km_production")
+        method("docker kill nginx")
+        method("docker rm nginx")
+        method("docker kill postgres")
+        method("docker rm postgres")
 
-def runProduction(remote, buildName):
-    if remote:
-        command = run
-    else:
-        command = local
-    killContainers(remote)
-    command("docker run -name km_production \
+def runProduction(method, buildName):
+    killContainers(method)
+    method("docker run -name km_production \
                            -v /home/fkalter/km/postgresdata:/data:rw\
                            -v /home/fkalter/km/log:/log\
                            -d -p 4001:4001 \
                            freekkalter/km:{} /usr/bin/supervisord".format(buildName) )
 
-    command("docker run -d -p 443:443 -link km_production:app -name nginx\
+    method("docker run -d -p 443:443 -link km_production:app -name nginx\
                                   -v /home/fkalter/km/ssl:/etc/nginx/conf:ro \
                                   freekkalter/nginx:deploy /start_nginx")
 
@@ -85,7 +75,7 @@ def rollback():
     buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=getLatestBuildNr()-1))
     if buildNumber < 0:
         buildNumber = bn+buildNumber
-    runProduction(True, buildNumber)
+    runProduction(run, buildNumber)
 
 def getSqlDump(directory):
     run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))
@@ -96,6 +86,8 @@ def pullProductionData():
     getSqlDump('./backup')
 
     # import into local running container
+    runProduction(local, getLatestBuildNr())
+    time.sleep(2)
     local('docker run -v /home/fkalter/github/km/backup:/backup:rw -link km_production:main freekkalter/km:deploy /restore.sh')
 
 # call backup from cronjob/jenkins
