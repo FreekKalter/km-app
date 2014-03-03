@@ -4,7 +4,7 @@ import time
 
 env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
-env.hosts.extend(['fkalter@paris'])
+env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
 def localTest():
     killContainers(local)
