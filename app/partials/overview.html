@@ -1,4 +1,5 @@
 <a href="#/input/today">today</a>
+
 <tabset>
     <tab heading="Kilometers" select="loadData('kilometers')" active="kiloActive">
         <div class="table-responsive">
@@ -47,9 +48,27 @@
             <tbody>
                 <tr ng-repeat="t in times" class="repeated-item">
                     <td>{{t.Date |date:'EEE dd-MM-yyyy'}}</td>
-                    <td>{{t.CheckIn |date:'HH:mm'}}</td>
-                    <td>{{t.CheckOut |date:'HH:mm'}}</td>
+                    <td>
+                        <ng-switch on="t.Editable">
+                            <input id="checkin" ng-switch-when="true" type="text" ng-model="t.CheckIn"></input>
+                            <span ng-switch-default>{{t.CheckIn}}</span>
+                        </ng-switch>
+                    </td>
+                    <td>
+                        <ng-switch on="t.Editable">
+                            <input id="checkout" ng-switch-when="true" type="text" ng-model="t.CheckOut"></input>
+                            <span ng-switch-default>{{t.CheckOut}}</span>
+                        </ng-switch>
+                    </td>
                     <td>{{t.Hours | number:1}}</td>
+                    <td class="buttons">
+                        <ng-switch on="t.Editable">
+                            <button ng-switch-default type="button" class="btn btn-sm" ng-click="editTime($index)">
+                                <span class="glyphicon glyphicon-pencil"></span>
+                            </button>
+                            <button ng-switch-when="true" ng-click="saveTime($index, t.Date, t.CheckIn, t.CheckOut)">Save</button>
+                        </ng-switch>
+                    </td>
                 </tr>
             </tbody>
         </table>

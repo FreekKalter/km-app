@@ -1,5 +1,6 @@
-/*jslint browser:true*/
-/*global angular, kmApp*/
+/*jslint browser: true*/
+/*jshint globalstrict:true */
+/*global angular, kmApp, console*/
 'use strict';
 
 var kmControllers = angular.module('kmControllers', []);
@@ -27,10 +28,12 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     };
 
     $scope.save = function(name, fieldValue){
-        $http.post('/save', {name: name, value: fieldValue}).success(function(data){
+        var id = $scope.id || $routeParams.id;
+        $http.post('/save/kilometers/' + id, {name: name, value: fieldValue}).success(function(data){
             if(name === 'Terug'){
                 $location.path('/overview');
             }else{
+                $scope.id = data;
                 $scope.form[name].Editable=false;
                 $scope.getState();
             }
@@ -41,6 +44,9 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         $scope.form[name].Editable=true;
     };
 
+    $scope.goTo = function(address){
+       $location.path(address);
+    };
     $scope.valid = function(name){
         return $scope.kmform['{{field}}'].$error.integer;
     };
@@ -75,6 +81,7 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
     }
 
     $scope.loadData = function(category){
+        $scope.testVar = false;
         var path = [ 'overview', category, $routeParams.year, $routeParams.month].join('/');
         if(category === $routeParams.category){
             if(category === 'kilometers'){
@@ -99,6 +106,20 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
 
     $scope.editRow = function(index){
         $location.path('/input/' + $scope.kilometers[index].Id);
+    };
+
+    $scope.editTime = function(index){
+        $scope.times[index].Editable = true;
+    };
+
+    $scope.saveTime = function(index){
+        var parsed = new Date($scope.times[index].Date);
+        var dateStr =  parsed.getDate() + '-' + (parsed.getMonth()+1) + '-' +  parsed.getFullYear();
+
+        $http.post('/save/times/' + $scope.times[index].Id, {date: dateStr,  checkin: $scope.times[index].CheckIn, checkout: $scope.times[index].CheckOut}).success(function(data){
+            $scope.times[index].Editable = false;
+        });
+
     };
 
     $scope.go = function(path){

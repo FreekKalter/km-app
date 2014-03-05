@@ -74,7 +74,8 @@ func NewServer(dbName string, config Config) *Server {
 
 	s.HandleFunc("/", s.homeHandler).Methods("GET")
 	s.HandleFunc("/state/{id}", s.stateHandler).Methods("GET")
-	s.HandleFunc("/save", s.saveHandler).Methods("POST")
+	s.HandleFunc("/save/kilometers/{id}", s.saveKilometersHandler).Methods("POST")
+	s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
 	s.HandleFunc("/delete/{id}", s.deleteHandler).Methods("GET")
 	return s
@@ -179,6 +180,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	type State struct {
 		Date                          string
 		Begin, Eerste, Laatste, Terug Field
+		LastDayError                  string
 	}
 	var state State
 	state.Date = dateStr
@@ -193,17 +195,15 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, InvalidId.Body, InvalidId.Code)
 			return
 		}
-
 		err = s.Dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
 	}
+	s.log.Println(err)
 	switch {
-	case err != nil:
-		if err != nil {
-			http.Error(w, "Database error", 500)
-			s.log.Println("stateHandler:", err)
-			return
-		}
-	case today == (Kilometers{}): // today not saved yet TODO: check this
+	case err != nil && err.Error() != "sql: no rows in result set":
+		http.Error(w, "Database error", 500)
+		s.log.Println("stateHandler:", err)
+		return
+	case err != nil && err.Error() == "sql: no rows in result set": // today not saved yet TODO: check this
 		s.log.Println("no today")
 		var lastDay Kilometers
 		err := s.Dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
@@ -212,15 +212,22 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			s.log.Println("stateHandler:", err)
 			return
 		}
-		if lastDay == (Kilometers{}) { // Nothing in db yet
-
+		if lastDay != (Kilometers{}) { // Nothing in db yet
+			state.Begin = Field{lastDay.getMax(), true}
+			state.Eerste = Field{0, true}
+			state.Laatste = Field{0, true}
+			state.Terug = Field{0, true}
 		}
-		state.Begin = Field{lastDay.getMax(), true}
-		state.Eerste = Field{0, true}
-		state.Laatste = Field{0, true}
-		state.Terug = Field{0, true}
+
+		var lastDayTimes Times
+		err = s.Dbmap.SelectOne(&lastDayTimes, "select * from times where id=$1", lastDay.Id)
+		if err == nil {
+			if lastDayTimes.CheckIn == 0 || lastDayTimes.CheckOut == 0 {
+				state.LastDayError = fmt.Sprintf("overview/tijden/%d/%d", lastDayTimes.Date.Year(), lastDayTimes.Date.Month())
+			}
+		}
 	default: // Something is already filled in for today
-		s.log.Println(today)
+		s.log.Println("today:", today)
 		if today.Begin != 0 {
 			state.Begin.Value = today.Begin
 		} else {
@@ -280,8 +287,10 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	case "tijden":
 		var all []Times
 		type Column struct {
-			Date, CheckIn, CheckOut time.Time
-			Hours                   float64
+			Id                int64
+			Date              time.Time
+			CheckIn, CheckOut string
+			Hours             float64
 		}
 		columns := make([]Column, 0)
 		_, err := s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
@@ -292,10 +301,21 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, c := range all {
 			var col Column
+			col.Id = c.Id
 			col.Date = c.Date
-			col.CheckIn = time.Unix(c.CheckIn, 0)
-			col.CheckOut = time.Unix(c.CheckOut, 0)
-			col.Hours = (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours()
+			if c.CheckIn != 0 {
+				col.CheckIn = time.Unix(c.CheckIn, 0).Format("15:04")
+			} else {
+				col.CheckIn = "-"
+			}
+			if c.CheckOut != 0 {
+				col.CheckOut = time.Unix(c.CheckOut, 0).Format("15:04")
+			} else {
+				col.CheckOut = "-"
+			}
+			if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
+				col.Hours = hours
+			}
 			columns = append(columns, col)
 		}
 		jsonEncoder.Encode(columns)
@@ -325,8 +345,8 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	s.log.Println("delete:", deleted, "from kilometers")
 	deleted, err = s.Dbmap.Delete(t)
-	if err != nil || deleted == 0 {
-		s.log.Println("error deleting from times", deleted, err)
+	if err != nil {
+		s.log.Println("error deleting from times", err)
 		http.Error(w, InvalidId.Body, InvalidId.Code)
 		return
 	}
@@ -339,7 +359,8 @@ func getDateStr() string {
 	return fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
 }
 
-func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) saveKilometersHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -368,49 +389,149 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, UnknownField.Body, UnknownField.Code)
 		return
 	}
-	dateStr := getDateStr()
-	id, err := s.Dbmap.SelectInt("select id from kilometers where date=$1", dateStr)
 
-	//today := new(Kilometers)
-	today := NewKilometers()
-	if id == 0 { // nothing saved for today, save posted data and date
-		today.addPost(pv)
-		s.log.Println(today)
-		err = s.Dbmap.Insert(today)
-		if err != nil {
-			http.Error(w, DbError.Body, DbError.Code)
-			s.log.Println(err)
-			return
+	today := new(Kilometers)
+	s.log.Println("initialized today struct:", today)
+	var id int64
+	if vars["id"] == "today" { // use own dateStr
+		now := time.Now().UTC()
+		dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
+		err := s.Dbmap.SelectOne(today, "select * from kilometers where date=$1", dateStr)
+		s.log.Println(err, today)
+		if err == nil { // there is already data for today (so use update)
+			s.log.Println(err, "dus selectONe goed gegaan, dus al data voor vandaag", today)
+			today.addPost(pv)
+			s.log.Println("na toevoegen van geposte data", today)
+			_, err = s.Dbmap.Update(today)
+			if err != nil {
+				http.Error(w, DbError.Body, DbError.Code)
+				s.log.Println(err)
+				return
+			}
+		} else {
+			s.log.Println("selectone gaf error, dus geen data voor vandaag")
+			today = new(Kilometers) //reinit today, check if it was in database cleared this var
+			today.Date = time.Now().UTC()
+			today.addPost(pv)
+			s.log.Println("hele struct die geinsert gaat worden", today)
+			err = s.Dbmap.Insert(today)
+			if err != nil {
+				http.Error(w, DbError.Body, DbError.Code)
+				s.log.Println(err)
+				return
+			}
 		}
 		id = today.Id
-		s.log.Println("id to be used to save Times:", id)
-	} else { // update already partially saved day
+	} else { // id provided (so already an entry for sure), get it, add it and save it
+		id, err = strconv.ParseInt(vars["id"], 10, 64)
+		if err != nil {
+			http.Error(w, NotParsable.Body, NotParsable.Code)
+			s.log.Println(err)
+			return
+		}
 		err = s.Dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
-		s.log.Println("saved for today:", today)
-		//today, err = s.Dbmap.Get(Kilometers{}, id)
 		if err != nil {
 			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
-		s.log.Println("post data:", pv)
 		today.addPost(pv)
-		s.log.Println("about to be saved:", today)
 		_, err = s.Dbmap.Update(today)
 		if err != nil {
 			http.Error(w, DbError.Body, DbError.Code)
 			s.log.Println(err)
 			return
 		}
-		s.log.Println("saved succeeded probably")
 	}
-	s.log.Println("id to be used to save Times:", id)
+
 	pv.Name = strings.ToLower(pv.Name)
 	if pv.Name == "eerste" {
 		go timeStamp(s, "in", id)
 	} else if pv.Name == "laatste" {
 		go timeStamp(s, "out", id)
+	} else if pv.Name == "begin" {
+		var days []Kilometers
+		_, err := s.Dbmap.Select(&days, "select * from kilometers order by date desc limit 2")
+		if err != nil {
+			s.log.Println("erronr in saving yesterday", err)
+		}
+		if len(days) == 2 && days[1].Terug == 0 {
+			days[1].Terug = pv.Value
+			_, err := s.Dbmap.Update(&days[1])
+			if err != nil {
+				s.log.Println("trying to save yesterday:", err)
+			}
+		}
+
+	}
+	fmt.Fprintf(w, "%d", id)
+}
+
+func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, NotParsable.Body, NotParsable.Code)
+		s.log.Println(err)
+		return
+	}
+	type TimesPost struct {
+		Date, CheckIn, CheckOut string
+	}
+	var tp TimesPost
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, NotParsable.Body, NotParsable.Code)
+		s.log.Println(err)
+		return
+	}
+	s.log.Println(tp)
+	err = json.Unmarshal(body, &tp)
+	if err != nil {
+		http.Error(w, NotParsable.Body, NotParsable.Code)
+		s.log.Println(err)
+		return
 	}
 
-	fmt.Fprintf(w, "ok\n")
+	//loc, _ := time.LoadLocation("Europe/Berlin")
+	t := new(Times)
+	if tp.CheckIn == "-" {
+		t.CheckIn = 0
+	} else {
+		//checkin, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn), loc)
+		checkin, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn))
+		if err != nil {
+			http.Error(w, NotParsable.Body, NotParsable.Code)
+			s.log.Println(err)
+			return
+		}
+		t.CheckIn = checkin.UTC().Unix()
+	}
+
+	if tp.CheckOut == "-" {
+		t.CheckOut = 0
+	} else {
+		//checkout, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut), loc)
+		checkout, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut))
+		if err != nil {
+			http.Error(w, NotParsable.Body, NotParsable.Code)
+			s.log.Println(err)
+			return
+		}
+		err = s.Dbmap.SelectOne(t, "select * from times where id=$1", id)
+		if err != nil {
+			http.Error(w, DbError.Body, DbError.Code)
+			s.log.Println(err)
+			return
+		}
+		t.CheckOut = checkout.UTC().Unix()
+	}
+	_, err = s.Dbmap.Update(t)
+
+	if err != nil {
+		http.Error(w, DbError.Body, DbError.Code)
+		s.log.Println(err)
+		return
+	}
+	fmt.Fprintf(w, "%d", id)
 }

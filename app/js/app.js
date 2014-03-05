@@ -12,6 +12,9 @@ kmApp.config(['$routeProvider', function($routeProvider, $locationProvider){
         templateUrl:'partials/overview.html',
         controller: 'kmOverviewController'
     }).
+    when('/overview/tijden', {
+        redirectTo: '/overview/tijden/' + d.getFullYear() + '/' + (d.getMonth() +1)
+    }).
     when('/overview', {
         redirectTo: '/overview/kilometers/' + d.getFullYear() + '/' + (d.getMonth() +1)
     }).

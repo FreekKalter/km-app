@@ -3,6 +3,8 @@
 <div class="row-fluid" >
     <h3 class="text-center">{{ form.Date }}</h3>
 
+    <button class="btn btn-warning" ng-show="form.LastDayError" ng-click="goTo(form.LastDayError)">Vergeten te klokken</button>
+
     <form class="form-horizontal css-form" role="form" name="kmform" novalidate>
         <div ng-repeat="field in fields">
             <div class="form-group">
