@@ -25,6 +25,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type TimeRow struct {
+	Id                int64
+	Date              time.Time
+	CheckIn, CheckOut string
+	Hours             float64
+}
 type Server struct {
 	mux.Router
 	Dbmap     *gorp.DbMap
@@ -79,6 +85,7 @@ func NewServer(dbName string, config Config) *Server {
 	s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
 	s.HandleFunc("/delete/{id}", s.deleteHandler).Methods("GET")
+	s.HandleFunc("/csv/{year}/{month}", s.csvHandler).Methods("GET")
 	return s
 }
 
@@ -286,43 +293,69 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonEncoder.Encode(all)
 	case "tijden":
-		var all []Times
-		type Column struct {
-			Id                int64
-			Date              time.Time
-			CheckIn, CheckOut string
-			Hours             float64
-		}
-		columns := make([]Column, 0)
-		_, err := s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+		rows, err := getAllTimes(s, year, month)
 		if err != nil {
 			http.Error(w, DbError.String(), DbError.Code)
 			s.log.Println("overview:", err)
-			return
 		}
-		for _, c := range all {
-			var col Column
-			col.Id = c.Id
-			col.Date = c.Date
-			if c.CheckIn != 0 {
-				col.CheckIn = time.Unix(c.CheckIn, 0).Format("15:04")
-			} else {
-				col.CheckIn = "-"
-			}
-			if c.CheckOut != 0 {
-				col.CheckOut = time.Unix(c.CheckOut, 0).Format("15:04")
-			} else {
-				col.CheckOut = "-"
-			}
-			if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
-				col.Hours = hours
-			}
-			columns = append(columns, col)
-		}
-		jsonEncoder.Encode(columns)
+		jsonEncoder.Encode(rows)
 	default:
 		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
 		return
+	}
+}
+
+func getAllTimes(s *Server, year, month int64) (rows []TimeRow, err error) {
+	var all []Times
+	rows = make([]TimeRow, 0)
+	_, err = s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+	if err != nil {
+		return rows, err
+		return
+	}
+	for _, c := range all {
+		var row TimeRow
+		row.Id = c.Id
+		row.Date = c.Date
+		if c.CheckIn != 0 {
+			row.CheckIn = time.Unix(c.CheckIn, 0).Format("15:04")
+		} else {
+			row.CheckIn = "-"
+		}
+		if c.CheckOut != 0 {
+			row.CheckOut = time.Unix(c.CheckOut, 0).Format("15:04")
+		} else {
+			row.CheckOut = "-"
+		}
+		if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
+			row.Hours = hours
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+func (s *Server) csvHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	month, err := strconv.ParseInt(vars["month"], 10, 64)
+	if err != nil {
+		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+		s.log.Println("overview:", err)
+		return
+	}
+	year, err := strconv.ParseInt(vars["year"], 10, 64)
+	if err != nil {
+		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+		s.log.Println("overview:", err)
+		return
+	}
+	times, err := getAllTimes(s, year, month)
+	if err != nil {
+		http.Error(w, DbError.String(), DbError.Code)
+		s.log.Println("overview:", err)
+	}
+	for _, t := range times {
+		fmt.Fprintf(w, "%s,%s,%s,%.1f\n", t.Date.Format("Mon 2"), t.CheckIn, t.CheckOut, t.Hours)
 	}
 }
 
