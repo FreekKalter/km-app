@@ -1,3 +1,6 @@
+testing:
+    driver: postgres
+    open: user=docker dbname=km_test password=docker sslmode=disable
 development:
     driver: postgres
     open: user=docker dbname=km password=docker sslmode=disable

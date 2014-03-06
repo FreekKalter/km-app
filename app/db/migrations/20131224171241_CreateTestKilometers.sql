@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE test_kilometers (
-    Id serial NOT NULL CONSTRAINT pm PRIMARY KEY,
-    Date date CONSTRAINT unique_date UNIQUE,
+    Id serial NOT NULL CONSTRAINT pmT PRIMARY KEY,
+    Date date CONSTRAINT unique_dateT UNIQUE,
     Begin int,
     Eerste int,
     Laatste int,

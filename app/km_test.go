@@ -37,11 +37,11 @@ func tableDrivenTest(t *testing.T, table []*TestCombo) {
 		s.ServeHTTP(w, tc.req)
 		resp := tc.resp
 
-		if b := w.Body.String(); !strings.Contains(b, resp.Body) {
-			t.Fatalf("body = %q, want '%s'", b, resp.Body)
-		}
 		if w.Code != resp.Code {
 			t.Fatalf("code = %d, want %d", w.Code, resp.Code)
+		}
+		if b := w.Body.String(); !resp.Regex.MatchString(b) {
+			t.Fatalf("body = %q, want '%s'", b, resp.String())
 		}
 	}
 }
@@ -75,7 +75,7 @@ func TestDelete(t *testing.T) {
 		NewTestCombo("/delete/a", InvalidId),
 		NewTestCombo("/delete/-1", InvalidId),
 		// delete saved row, compare returned id
-		NewTestCombo("/delete/"+id, Response{id + "\n", 200}),
+		NewTestCombo("/delete/"+id, newResponse(id+"\n", 200)),
 	}
 	tableDrivenTest(t, table)
 }
@@ -87,13 +87,13 @@ func TestSave(t *testing.T) {
 		NewTestCombo("/save", NotFound),
 		NewTestCombo("/save/a", NotFound),
 	}
-	req, _ := http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
-	table = append(table, &TestCombo{req, Ok})
+	req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
+	table = append(table, &TestCombo{req, OkId})
 
-	req, _ = http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "Begin", "Value": "abc"}`))
+	req, _ = http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": "abc"}`))
 	table = append(table, &TestCombo{req, NotParsable})
 
-	req, _ = http.NewRequest("POST", "/save", strings.NewReader(`{"Name": "InvalidFieldname", "Value": 1234}`))
+	req, _ = http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "InvalidFieldname", "Value": 1234}`))
 	table = append(table, &TestCombo{req, UnknownField})
 
 	tableDrivenTest(t, table)

@@ -48,6 +48,7 @@ func NewServer(dbName string, config Config) *Server {
 
 	db, err := sql.Open("postgres", "user=docker dbname="+dbName+" password=docker sslmode=disable")
 	if err != nil {
+		fmt.Println("init:", err)
 		slog.Fatal("init:", err)
 	}
 	var Dbmap *gorp.DbMap
@@ -192,7 +193,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		err = s.Dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
 	} else {
 		if _, err := strconv.ParseInt(id, 10, 64); err != nil {
-			http.Error(w, InvalidId.Body, InvalidId.Code)
+			http.Error(w, InvalidId.String(), InvalidId.Code)
 			return
 		}
 		err = s.Dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
@@ -261,13 +262,13 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 	category := vars["category"]
 	month, err := strconv.ParseInt(vars["month"], 10, 64)
 	if err != nil {
-		http.Error(w, InvalidUrl.Body, InvalidUrl.Code)
+		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
 		s.log.Println("overview:", err)
 		return
 	}
 	year, err := strconv.ParseInt(vars["year"], 10, 64)
 	if err != nil {
-		http.Error(w, InvalidUrl.Body, InvalidUrl.Code)
+		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
 		s.log.Println("overview:", err)
 		return
 	}
@@ -279,7 +280,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		all := make([]Kilometers, 0)
 		_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			http.Error(w, DbError.Body, DbError.Code)
+			http.Error(w, DbError.String(), DbError.Code)
 			s.log.Println("overview:", err)
 			return
 		}
@@ -295,7 +296,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		columns := make([]Column, 0)
 		_, err := s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 		if err != nil {
-			http.Error(w, DbError.Body, DbError.Code)
+			http.Error(w, DbError.String(), DbError.Code)
 			s.log.Println("overview:", err)
 			return
 		}
@@ -320,7 +321,7 @@ func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonEncoder.Encode(columns)
 	default:
-		http.Error(w, InvalidUrl.Body, InvalidUrl.Code)
+		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
 		return
 	}
 }
@@ -331,7 +332,7 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	s.log.Println("delete:", id)
 	intId, err := strconv.ParseInt(id, 10, 64)
 	if err != nil || intId < 0 {
-		http.Error(w, InvalidId.Body, InvalidId.Code)
+		http.Error(w, InvalidId.String(), InvalidId.Code)
 		return
 	}
 	var k = &Kilometers{Id: intId}
@@ -340,14 +341,14 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	//_, err = s.Dbmap.Exec("delete from kilometers where id=$1", id)
 	deleted, err := s.Dbmap.Delete(k)
 	if err != nil || deleted == 0 {
-		http.Error(w, InvalidId.Body, InvalidId.Code)
+		http.Error(w, InvalidId.String(), InvalidId.Code)
 		return
 	}
 	s.log.Println("delete:", deleted, "from kilometers")
 	deleted, err = s.Dbmap.Delete(t)
 	if err != nil {
 		s.log.Println("error deleting from times", err)
-		http.Error(w, InvalidId.Body, InvalidId.Code)
+		http.Error(w, InvalidId.String(), InvalidId.Code)
 		return
 	}
 	s.log.Println("delete:", err)
@@ -364,14 +365,14 @@ func (s *Server) saveKilometersHandler(w http.ResponseWriter, r *http.Request) {
 	// parse posted data into PostValue datastruct
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, NotParsable.Body, NotParsable.Code)
+		http.Error(w, NotParsable.String(), NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
 	var pv PostValue
 	err = json.Unmarshal(body, &pv)
 	if err != nil {
-		http.Error(w, NotParsable.Body, NotParsable.Code)
+		http.Error(w, NotParsable.String(), NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
@@ -386,7 +387,7 @@ func (s *Server) saveKilometersHandler(w http.ResponseWriter, r *http.Request) {
 		return false
 	}
 	if !san(pv.Name) {
-		http.Error(w, UnknownField.Body, UnknownField.Code)
+		http.Error(w, UnknownField.String(), UnknownField.Code)
 		return
 	}
 
@@ -404,7 +405,7 @@ func (s *Server) saveKilometersHandler(w http.ResponseWriter, r *http.Request) {
 			s.log.Println("na toevoegen van geposte data", today)
 			_, err = s.Dbmap.Update(today)
 			if err != nil {
-				http.Error(w, DbError.Body, DbError.Code)
+				http.Error(w, DbError.String(), DbError.Code)
 				s.log.Println(err)
 				return
 			}
@@ -416,7 +417,7 @@ func (s *Server) saveKilometersHandler(w http.ResponseWriter, r *http.Request) {
 			s.log.Println("hele struct die geinsert gaat worden", today)
 			err = s.Dbmap.Insert(today)
 			if err != nil {
-				http.Error(w, DbError.Body, DbError.Code)
+				http.Error(w, DbError.String(), DbError.Code)
 				s.log.Println(err)
 				return
 			}
@@ -425,20 +426,20 @@ func (s *Server) saveKilometersHandler(w http.ResponseWriter, r *http.Request) {
 	} else { // id provided (so already an entry for sure), get it, add it and save it
 		id, err = strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			http.Error(w, NotParsable.Body, NotParsable.Code)
+			http.Error(w, NotParsable.String(), NotParsable.Code)
 			s.log.Println(err)
 			return
 		}
 		err = s.Dbmap.SelectOne(today, "select * from kilometers where id=$1", id)
 		if err != nil {
-			http.Error(w, DbError.Body, DbError.Code)
+			http.Error(w, DbError.String(), DbError.Code)
 			s.log.Println(err)
 			return
 		}
 		today.addPost(pv)
 		_, err = s.Dbmap.Update(today)
 		if err != nil {
-			http.Error(w, DbError.Body, DbError.Code)
+			http.Error(w, DbError.String(), DbError.Code)
 			s.log.Println(err)
 			return
 		}
@@ -471,7 +472,7 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		http.Error(w, NotParsable.Body, NotParsable.Code)
+		http.Error(w, NotParsable.String(), NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
@@ -481,14 +482,14 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 	var tp TimesPost
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, NotParsable.Body, NotParsable.Code)
+		http.Error(w, NotParsable.String(), NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
 	s.log.Println(tp)
 	err = json.Unmarshal(body, &tp)
 	if err != nil {
-		http.Error(w, NotParsable.Body, NotParsable.Code)
+		http.Error(w, NotParsable.String(), NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
@@ -501,7 +502,7 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 		//checkin, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn), loc)
 		checkin, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn))
 		if err != nil {
-			http.Error(w, NotParsable.Body, NotParsable.Code)
+			http.Error(w, NotParsable.String(), NotParsable.Code)
 			s.log.Println(err)
 			return
 		}
@@ -514,13 +515,13 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 		//checkout, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut), loc)
 		checkout, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut))
 		if err != nil {
-			http.Error(w, NotParsable.Body, NotParsable.Code)
+			http.Error(w, NotParsable.String(), NotParsable.Code)
 			s.log.Println(err)
 			return
 		}
 		err = s.Dbmap.SelectOne(t, "select * from times where id=$1", id)
 		if err != nil {
-			http.Error(w, DbError.Body, DbError.Code)
+			http.Error(w, DbError.String(), DbError.Code)
 			s.log.Println(err)
 			return
 		}
@@ -529,7 +530,7 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = s.Dbmap.Update(t)
 
 	if err != nil {
-		http.Error(w, DbError.Body, DbError.Code)
+		http.Error(w, DbError.String(), DbError.Code)
 		s.log.Println(err)
 		return
 	}
