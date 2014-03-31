@@ -522,21 +522,28 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 		s.log.Println(err)
 		return
 	}
-	s.log.Println(tp)
+	s.log.Println("request body:", body)
 	err = json.Unmarshal(body, &tp)
 	if err != nil {
 		http.Error(w, NotParsable.String(), NotParsable.Code)
 		s.log.Println(err)
 		return
 	}
+	s.log.Printf("unmarshalled req: %+v", tp)
 
-	//loc, _ := time.LoadLocation("Europe/Berlin")
-	t := new(Times)
+	loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
+	var t Times
+	err = s.Dbmap.SelectOne(&t, "select * from times where id=$1", id)
+	if err != nil {
+		http.Error(w, DbError.String(), DbError.Code)
+		s.log.Println(err)
+		return
+	}
+
 	if tp.CheckIn == "-" {
 		t.CheckIn = 0
 	} else {
-		//checkin, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn), loc)
-		checkin, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn))
+		checkin, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckIn), loc)
 		if err != nil {
 			http.Error(w, NotParsable.String(), NotParsable.Code)
 			s.log.Println(err)
@@ -548,23 +555,16 @@ func (s *Server) saveTimesHandler(w http.ResponseWriter, r *http.Request) {
 	if tp.CheckOut == "-" {
 		t.CheckOut = 0
 	} else {
-		//checkout, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut), loc)
-		checkout, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut))
+		checkout, err := time.ParseInLocation("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut), loc)
+		//checkout, err := time.Parse("2-1-2006 15:04", fmt.Sprintf("%s %s", tp.Date, tp.CheckOut))
 		if err != nil {
 			http.Error(w, NotParsable.String(), NotParsable.Code)
 			s.log.Println(err)
 			return
 		}
-		err = s.Dbmap.SelectOne(t, "select * from times where id=$1", id)
-		if err != nil {
-			http.Error(w, DbError.String(), DbError.Code)
-			s.log.Println(err)
-			return
-		}
 		t.CheckOut = checkout.UTC().Unix()
 	}
-	_, err = s.Dbmap.Update(t)
-
+	_, err = s.Dbmap.Update(&t)
 	if err != nil {
 		http.Error(w, DbError.String(), DbError.Code)
 		s.log.Println(err)
