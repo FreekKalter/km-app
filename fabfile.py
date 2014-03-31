@@ -2,10 +2,13 @@ from fabric.api import *
 import os
 import time
 
-env.use_ssh_config = True
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
+env.use_ssh_config = True
+#env.key_filename = '/var/lib/jenkins/.ssh/id_rsa'
 env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
+print env.user
+print env.key_filename
 def localTest():
     killContainers(local)
     local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
