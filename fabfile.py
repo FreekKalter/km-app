@@ -10,7 +10,7 @@ def localTest():
     killContainers(local)
     local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
                        -v /home/fkalter/km/log:/log:rw\
-                       -name postgres\
+                       --name postgres\
                        -d -p 5432:5432\
                        freekkalter/postgres-supervisord:km /usr/bin/supervisord')
     local('make app/km')
@@ -50,7 +50,7 @@ def pushContainers():
 
 def killContainers(method):
     with settings(hide('warnings'), warn_only=True):
-        local('pkill km')
+        local('pkill km$')
         method("docker kill km_production")
         method("docker rm km_production")
         method("docker kill nginx")
@@ -60,13 +60,13 @@ def killContainers(method):
 
 def runProduction(method, buildName):
     killContainers(method)
-    method("docker run -name km_production \
+    method("docker run --name km_production \
                            -v /home/fkalter/km/postgresdata:/data:rw\
                            -v /home/fkalter/km/log:/log\
                            -d -p 4001:4001 \
                            freekkalter/km:{} /usr/bin/supervisord".format(buildName) )
 
-    method("docker run -d -p 443:443 -link km_production:app -name nginx\
+    method("docker run -d -p 443:443 --link km_production:app --name nginx\
                                   -v /home/fkalter/km/ssl:/etc/nginx/conf:ro \
                                   freekkalter/nginx:deploy /start_nginx")
 
@@ -78,7 +78,7 @@ def rollback():
     runProduction(run, buildNumber)
 
 def getSqlDump(directory):
-    run('docker run -v /home/fkalter/backup:/backup:rw -link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))
+    run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))
     get('/home/fkalter/backup/backup.sql', directory)
 
 def pullProductionData():
@@ -88,7 +88,7 @@ def pullProductionData():
     # import into local running container
     runProduction(local, getLatestBuildNr())
     time.sleep(2)
-    local('docker run -v /home/fkalter/github/km/backup:/backup:rw -link km_production:main freekkalter/km:deploy /restore.sh')
+    local('docker run -v /home/fkalter/github/km/backup:/backup:rw --link km_production:main freekkalter/km:deploy /restore.sh')
 
 # call backup from cronjob/jenkins
 def backup():
