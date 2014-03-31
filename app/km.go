@@ -311,19 +311,22 @@ func getAllTimes(s *Server, year, month int64) (rows []TimeRow, err error) {
 	_, err = s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
 	if err != nil {
 		return rows, err
-		return
+	}
+	loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
+	if err != nil {
+		s.log.Println(err)
 	}
 	for _, c := range all {
 		var row TimeRow
 		row.Id = c.Id
 		row.Date = c.Date
 		if c.CheckIn != 0 {
-			row.CheckIn = time.Unix(c.CheckIn, 0).Format("15:04")
+			row.CheckIn = time.Unix(c.CheckIn, 0).In(loc).Format("15:04")
 		} else {
 			row.CheckIn = "-"
 		}
 		if c.CheckOut != 0 {
-			row.CheckOut = time.Unix(c.CheckOut, 0).Format("15:04")
+			row.CheckOut = time.Unix(c.CheckOut, 0).In(loc).Format("15:04")
 		} else {
 			row.CheckOut = "-"
 		}
