@@ -1,5 +1,34 @@
-FROM freekkalter/nginx:start_nginx
+#
+# Nginx Dockerfile
+#
+# https://github.com/dockerfile/nginx
+#
+FROM ubuntu:12.10
 
-RUN apt-get update && apt-get upgrade
+# Update OS.
+RUN echo "deb http://archive.ubuntu.com/ubuntu quantal main universe multiverse" > /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get upgrade -y
+
+# Install basic packages.
+RUN apt-get install -y software-properties-common
+RUN apt-get install -y curl git htop unzip vim wget
+
+
+# Install Nginx.
+RUN add-apt-repository -y ppa:nginx/stable
+RUN apt-get update
+RUN apt-get install -y nginx
+
+# Attach volumes.
+#VOLUME /etc/nginx/sites-enabled
+#VOLUME /var/log/nginx
+
+EXPOSE 443
+
+ADD start_nginx /start_nginx
+RUN chmod +x /start_nginx
+
 ADD default.template /etc/nginx/sites-available/default.template
+ADD nginx.template /etc/nginx/nginx.template
 ADD static /static

@@ -1,0 +1,8 @@
+#!/bin/bash
+sed "s/FASTCGI_PASS/$APP_PORT_4001_TCP_ADDR:4001/" /etc/nginx/sites-available/default.template > /etc/nginx/sites-available/default
+if [ "$1" == "daemon" ];then
+        sed "s/DEAMON//" /etc/nginx/nginx.template > /etc/nginx/nginx.conf
+else
+        sed "s/DEAMON/daemon off;/" /etc/nginx/nginx.template > /etc/nginx/nginx.conf
+fi
+nginx
