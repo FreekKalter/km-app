@@ -3,10 +3,10 @@
 #
 # https://github.com/dockerfile/nginx
 #
-FROM ubuntu:12.10
+FROM ubuntu:13.10
 
 # Update OS.
-RUN echo "deb http://archive.ubuntu.com/ubuntu quantal main universe multiverse" > /etc/apt/sources.list
+RUN echo "deb http://archive.ubuntu.com/ubuntu saucy main universe multiverse" > /etc/apt/sources.list
 RUN apt-get update
 RUN apt-get upgrade -y
 
