@@ -6,7 +6,12 @@
 FROM ubuntu:13.10
 
 # Update OS.
-RUN echo "deb http://archive.ubuntu.com/ubuntu saucy main universe multiverse" > /etc/apt/sources.list
+RUN echo "deb http://archive.ubuntu.com/ubuntu saucy main" > /etc/apt/sources.list
+RUN echo "deb http://archive.ubuntu.com/ubuntu saucy-updates main" >> /etc/apt/sources.list
+RUN echo "deb http://security.ubuntu.com/ubuntu saucy-security main universe" >> /etc/apt/sources.list
+RUN echo "deb http://archive.ubuntu.com/ubuntu saucy universe" >> /etc/apt/sources.list
+RUN echo "deb http://archive.ubuntu.com/ubuntu saucy-updates universe" >> /etc/apt/sources.list
+
 RUN apt-get update
 RUN apt-get upgrade -y
 
