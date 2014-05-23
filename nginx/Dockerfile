@@ -25,10 +25,6 @@ RUN add-apt-repository -y ppa:nginx/stable
 RUN apt-get update
 RUN apt-get install -y nginx
 
-# Attach volumes.
-#VOLUME /etc/nginx/sites-enabled
-#VOLUME /var/log/nginx
-
 EXPOSE 443
 
 ADD start_nginx /start_nginx

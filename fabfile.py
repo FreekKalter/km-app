@@ -7,8 +7,6 @@ env.use_ssh_config = True
 #env.key_filename = '/var/lib/jenkins/.ssh/id_rsa'
 env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
-print env.user
-print env.key_filename
 def localTest():
     killContainers(local)
     local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
@@ -27,14 +25,16 @@ def localDeploy():
     runProduction(local, buildName)
 
 def deploy():
-    buildNr = os.environ['BUILD_NUMBER']
-    buildContainers(buildNr)
-    pushContainers()
-    run("docker pull freekkalter/km")
+    if not os.environ.has_key('NO_DOCKER_BUILD'):
+        buildContainers()
+        pushContainers()
+    run("docker pull freekkalter/km-app")
     run("docker pull freekkalter/nginx")
-    runProduction(run, buildNr)
+    runProduction(run)
 
-def buildContainers(buildNr):
+def buildContainers(name=None):
+    if not name:
+        name = os.environ['BUILD_NUMBER']
     local("make app/km minify")
     local('mkdir -p nginx/static/js')
     local('mkdir -p nginx/static/css')
@@ -44,11 +44,16 @@ def buildContainers(buildNr):
     local('cp -R app/partials nginx/static')
 
     local("cp config-production.yml app/config.yml")
-    local("docker build -t freekkalter/km:{} .".format(buildNr))
+
+    latest =  getLatestBuildNr(local)
+    with open('Dockerfile.template', 'r') as i, open('Dockerfile', 'w') as o:
+        for l in i.xreadlines():
+            o.write(l.replace('BASE', latest))
+    local("docker build -t freekkalter/km-app:{} .".format(buildNr))
     local("docker build -t freekkalter/nginx:deploy nginx")
 
 def pushContainers():
-    local("docker push freekkalter/km")
+    local("docker push freekkalter/km-app")
     local("docker push freekkalter/nginx")
 
 def killContainers(method):
@@ -61,27 +66,30 @@ def killContainers(method):
         method("docker kill postgres")
         method("docker rm postgres")
 
-def runProduction(method, buildName):
+def runProduction(method, buildName=None):
+    if not buildName:
+        buildName = os.environ['BUILD_NUMBER']
     killContainers(method)
     method("docker run --name km_production \
                            -v /home/fkalter/km/postgresdata:/data:rw\
                            -v /home/fkalter/km/log:/log\
                            -d -p 4001:4001 \
-                           freekkalter/km:{} /usr/bin/supervisord".format(buildName) )
+                           freekkalter/km-app:{} /usr/bin/supervisord".format(buildName) )
 
     method("docker run -d -p 443:443 --link km_production:app --name nginx\
-                                  -v /home/fkalter/km/ssl:/etc/nginx/conf:ro \
-                                  freekkalter/nginx:deploy /start_nginx")
+                          -v /home/fkalter/km/ssl:/etc/nginx/conf:ro \
+                          freekkalter/nginx:deploy /start_nginx")
 
 def rollback():
     # find latest buildnumber on remote, default = the build before the last one
-    buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=getLatestBuildNr()-1))
+    buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=getLatestBuildNr(run)-1))
     if buildNumber < 0:
         buildNumber = bn+buildNumber
     runProduction(run, buildNumber)
 
 def getSqlDump(directory):
-    run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main freekkalter/km:{} /backup.sh'.format(getLatestBuildNr()))
+    run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main\
+                    freekkalter/km-app:{} /backup.sh'.format(getLatestBuildNr(run)))
     get('/home/fkalter/backup/backup.sql', directory)
 
 def pullProductionData():
@@ -89,9 +97,9 @@ def pullProductionData():
     getSqlDump('./backup')
 
     # import into local running container
-    runProduction(local, getLatestBuildNr())
+    runProduction(local, getLatestBuildNr(run))
     time.sleep(2)
-    local('docker run -v /home/fkalter/github/km/backup:/backup:rw --link km_production:main freekkalter/km:deploy /restore.sh')
+    local('docker run -v /home/fkalter/github/km/backup:/backup:rw --link km_production:main freekkalter/km-app:deploy /restore.sh')
 
 # call backup from cronjob/jenkins
 def backup():
@@ -101,5 +109,8 @@ def backup():
     local("tar -czf ~/km-backup/backup_`date +%d-%m-%Y.tar.gz` ./backup.sql")
     local("rm ./backup.sql")
 
-def getLatestBuildNr():
-    return int(run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort | tail -n1"))
+def getLatestBuildNr(method):
+    try:
+       return int(method("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1"))
+    except ValueError:
+        return 'base'
