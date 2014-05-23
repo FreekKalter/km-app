@@ -6,6 +6,7 @@ env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
 env.use_ssh_config = True
 #env.key_filename = '/var/lib/jenkins/.ssh/id_rsa'
 env.hosts.extend(['fkalter@km-app.kalteronline.org'])
+buildNr = None
 
 def localTest():
     killContainers(local)
@@ -110,7 +111,10 @@ def backup():
     local("rm ./backup.sql")
 
 def getLatestBuildNr(method):
+    if buildNr:
+        return buildNr
     try:
-       return int(method("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1"))
+        buildNr = int(method("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1"))
     except ValueError:
-        return 'base'
+        buildNr = 'base'
+    return buildNr
