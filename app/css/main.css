@@ -1,5 +1,6 @@
 legend span {
     font-style: italic;
+    display: block;
 }
 
 h1 a, a:hover {
@@ -11,10 +12,11 @@ h1 a, a:hover {
     border-color: #FA787E;
 }
 
-legend span{
-    display: block;
-}
-
-td.buttons{
+td.buttons {
     width: 10%;
 }
+
+a.btn {
+    margin-bottom : 10px;
+}
+
