@@ -49,7 +49,7 @@ def buildContainers(name=None):
     with open('Dockerfile.template', 'r') as i, open('Dockerfile', 'w') as o:
         for l in i.xreadlines():
             o.write(l.replace('BASE', latest))
-    local("docker build -t freekkalter/km-app:{} .".format(buildNr))
+    local("docker build -t freekkalter/km-app:{} .".format(name))
     local("docker build -t freekkalter/nginx:deploy nginx")
 
 def pushContainers():
