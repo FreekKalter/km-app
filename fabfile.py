@@ -1,6 +1,8 @@
 from fabric.api import *
 import os
 import time
+from path import path
+from operator import attrgetter
 
 env.ssh_config_path = '/var/lib/jenkins/.ssh/config'
 env.use_ssh_config = True
@@ -108,6 +110,15 @@ def backup():
     local('mkdir -p ~/km-backup')
     local("tar -czf ~/km-backup/backup_`date +%d-%m-%Y.tar.gz` ./backup.sql")
     local("rm ./backup.sql")
+
+def restore(backuparchive):
+    local("tar -C /tmp --overwrite -xzf "+backuparchive)
+
+    uploaded = put('/tmp/backup.sql', '/home/fkalter/backup/backup.sql')
+    if uploaded.failed:
+        print 'uploading ' + uploaded + ' failed'
+        return
+    run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main freekkalter/km-app:{} /restore.sh'.format(getLatestBuildNr(run)))
 
 def getLatestBuildNr(method):
     try:
