@@ -47,7 +47,7 @@ def buildContainers(name=None):
 
     local("cp config-production.yml app/config.yml")
 
-    latest =  getLatestBuildNr(local)
+    latest =  getLatestBuildNr('local')
     with open('Dockerfile.template', 'r') as i, open('Dockerfile', 'w') as o:
         for l in i.xreadlines():
             o.write(l.replace('BASE', latest))
@@ -84,14 +84,14 @@ def runProduction(method, buildName=None):
 
 def rollback():
     # find latest buildnumber on remote, default = the build before the last one
-    buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=getLatestBuildNr(run)-1))
+    buildNumber = int(prompt('Rever to buildnumber: ', validate=int, default=getLatestBuildNr('run')-1))
     if buildNumber < 0:
         buildNumber = bn+buildNumber
     runProduction(run, buildNumber)
 
 def getSqlDump(directory):
     run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main\
-                    freekkalter/km-app:{} /backup.sh'.format(getLatestBuildNr(run)))
+                    freekkalter/km-app:{} /backup.sh'.format(getLatestBuildNr('run')))
     get('/home/fkalter/backup/backup.sql', directory)
 
 def pullProductionData():
@@ -99,9 +99,10 @@ def pullProductionData():
     getSqlDump('./backup')
 
     # import into local running container
-    runProduction(local, getLatestBuildNr(run))
+    buildnr = getLatestBuildNr('local')
+    runProduction(local, buildnr)
     time.sleep(2)
-    local('docker run -v /home/fkalter/github/km/backup:/backup:rw --link km_production:main freekkalter/km-app:deploy /restore.sh')
+    local('docker run -v /home/fkalter/github/km/backup:/backup:rw --link km_production:main freekkalter/km-app:{} /restore.sh'.format(buildnr))
 
 # call backup from cronjob/jenkins
 def backup():
@@ -116,12 +117,16 @@ def restore(backuparchive):
 
     uploaded = put('/tmp/backup.sql', '/home/fkalter/backup/backup.sql')
     if uploaded.failed:
-        print 'uploading ' + uploaded + ' failed'
+        print uploaded.failed + 'failed to upload'
         return
-    run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main freekkalter/km-app:{} /restore.sh'.format(getLatestBuildNr(run)))
+    run('docker run -v /home/fkalter/backup:/backup:rw --link km_production:main freekkalter/km-app:{} /restore.sh'.format(getLatestBuildNr('run')))
 
 def getLatestBuildNr(method):
     try:
-        return int(method("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1"))
-    except ValueError:
+        if method == 'local':
+            return int(local("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1", capture=True))
+        elif:
+            return int(run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1"))
+    except Exception as e:
         return 'base'
+
