@@ -14,4 +14,4 @@ app/js/*combined*
 app/css/*master*
 nginx/static/*
 *.min.css
-
+Dockerfile

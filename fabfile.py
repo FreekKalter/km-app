@@ -48,9 +48,10 @@ def buildContainers(name=None):
     local("cp config-production.yml app/config.yml")
 
     latest =  getLatestBuildNr('local')
+    print latest
     with open('Dockerfile.template', 'r') as i, open('Dockerfile', 'w') as o:
         for l in i.xreadlines():
-            o.write(l.replace('BASE', latest))
+            o.write(l.replace('BASE', str(latest)))
     local("docker build -t freekkalter/km-app:{} .".format(name))
     local("docker build -t freekkalter/nginx:deploy nginx")
 
@@ -125,7 +126,7 @@ def getLatestBuildNr(method):
     try:
         if method == 'local':
             return int(local("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1", capture=True))
-        elif:
+        else:
             return int(run("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n | tail -n1"))
     except Exception as e:
         return 'base'
