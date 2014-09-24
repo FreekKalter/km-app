@@ -11,18 +11,35 @@
             <div class="form-group">
                 <label for="{{field}}" class="control-label col-sm-2">{{field}}</label>
                 <div class="col-sm-10">
+                    <!-- kilometer field -->
                     <ng-switch on="form[field].Editable">
-                        <input autocomplete="off" type="number" ng-model="form[field].Value" id="{{field}}" name="{{field}}"
-                               ng-switch-when="true" onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" integer />
-                        <input type="number" ng-model="form[field].Value" id="{{field}}NonEdit" ng-switch-when="false" disabled>
+                        <div ng-switch-when="false" class="input-group has-success">
+                            <div class="input-group-addon"><span class="glyphicon glyphicon-road"></span></div>
+                            <input autocomplete="off" type="number" ng-model="form[field].Km" id="{{field}}" name="{{field}}"
+                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
+                        </div>
+                        <div ng-switch-when="true" class="input-group">
+                            <div class="input-group-addon"><span class="glyphicon glyphicon-road"></span></div>
+                            <input autocomplete="off" type="number" ng-model="form[field].Km" id="{{field}}" name="{{field}}"
+                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
+                        </div>
                     </ng-switch>
                     <ng-switch on="form[field].Editable">
-                        <button class="btn btn-xs" ng-click="save(field, form[field].Value)" ng-switch-when="true" ng-disabled="valid(field)">Save</button>
-                        <button class="btn btn-xs btn-inverse" ng-click="edit(field)" ng-switch-when="false">Edit</button>
+                        <div ng-switch-when="false" class="has-success input-group">
+                            <div class="input-group-addon"><span class="glyphicon glyphicon-time"></span></div>
+                            <input autocomplete="off" type="number" ng-model="form[field].Time" id="{{field}}" name="{{field}}"
+                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
+                        </div>
+                        <div ng-switch-when="true" class="input-group">
+                            <div class="input-group-addon"><span class="glyphicon glyphicon-time"></span></div>
+                            <input autocomplete="off" type="number" ng-model="form[field].Time" id="{{field}}" name="{{field}}"
+                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
+                        </div>
                     </ng-switch>
                 </div><!-- col-sm-10 -->
             </div><!-- form group -->
         </div> <!-- ng-repeat -->
+        <button type="sumbit" class="btn btn-default">Save</button>
     </form>
 
 </div> <!-- row -->
