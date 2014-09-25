@@ -7,6 +7,13 @@ var kmControllers = angular.module('kmControllers', []);
 
 kmControllers.controller('kmInput', function($scope,$routeParams, $location, $http){
     $scope.fields = [ 'Begin', 'Eerste', 'Laatste', 'Terug' ];
+    $('#datumprik').datepicker({
+        format: "dd-mm-yyyy",
+        weekStart: 1,
+        calendarWeeks: true,
+        autoclose: true,
+        todayHighlight: true
+    });
 
     $scope.getState = function(){
         $http.get('state/'+ $routeParams.id).success(function(data){

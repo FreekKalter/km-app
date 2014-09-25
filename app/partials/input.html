@@ -2,11 +2,19 @@
 
 <!--<div class="row-fluid" ng-controller="kmInput">-->
 <div class="row-fluid" >
-    <h3 class="text-center">{{ form.Date }}</h3>
-
     <button class="btn btn-warning" ng-show="form.LastDayError" ng-click="goTo(form.LastDayError)">Vergeten te klokken</button>
 
     <form class="form-horizontal css-form" role="form" name="kmform" novalidate>
+        <div class="form-group">
+            <label for="datumprik" class="control-label col-sm-2">Datum</label>
+            <div class="col-sm-6">
+                <div id="datepicker">
+                    <div class="input-group date">
+                        <span class="input-group-addon"><i class="glyphicon glyphicon-calendar"></i></span><input type="text" id="datumprik" name="datumprik" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
         <div ng-repeat="field in fields">
             <div class="form-group">
                 <label for="{{field}}" class="control-label col-sm-2">{{field}}</label>
@@ -39,7 +47,11 @@
                 </div><!-- col-sm-10 -->
             </div><!-- form group -->
         </div> <!-- ng-repeat -->
-        <button type="sumbit" class="btn btn-default">Save</button>
+        <div class="col-sm-10">
+            <div class="form-group">
+                <button type="sumbit" class="btn btn-default">Save</button>
+            </div>
+        </div><!--button column -->
     </form>
 
 </div> <!-- row -->
