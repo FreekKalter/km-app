@@ -182,16 +182,14 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
 	type Field struct {
-		Value    int
+		Km, Time int
 		Editable bool
 	}
 	type State struct {
-		Date                          string
 		Begin, Eerste, Laatste, Terug Field
 		LastDayError                  string
 	}
 	var state State
-	state.Date = dateStr
 
 	// Get data save for this day
 	var today Kilometers
@@ -221,10 +219,10 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if lastDay != (Kilometers{}) { // Nothing in db yet
-			state.Begin = Field{lastDay.getMax(), true}
-			state.Eerste = Field{0, true}
-			state.Laatste = Field{0, true}
-			state.Terug = Field{0, true}
+			state.Begin = Field{Km: lastDay.getMax(), Time: 0, Editable: true}
+			state.Eerste = Field{Km: 0, Time: 0, Editable: true}
+			state.Laatste = Field{Km: 0, Time: 0, Editable: true}
+			state.Terug = Field{Km: 0, Time: 0, Editable: true}
 		}
 
 		var lastDayTimes Times
@@ -237,27 +235,27 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	default: // Something is already filled in for today
 		s.log.Println("today:", today)
 		if today.Begin != 0 {
-			state.Begin.Value = today.Begin
+			state.Begin.Km = today.Begin
 		} else {
 			state.Begin.Editable = true
 		}
 		if today.Eerste == 0 {
-			state.Eerste.Value = int(today.Begin / 1000)
+			state.Eerste.Km = int(today.Begin / 1000)
 			state.Eerste.Editable = true
 		} else {
-			state.Eerste.Value = today.Eerste
+			state.Eerste.Km = today.Eerste
 		}
 		if today.Laatste == 0 {
-			state.Laatste.Value = int(today.Eerste / 1000)
+			state.Laatste.Km = int(today.Eerste / 1000)
 			state.Laatste.Editable = true
 		} else {
-			state.Laatste.Value = today.Laatste
+			state.Laatste.Km = today.Laatste
 		}
 		if today.Terug == 0 {
-			state.Terug.Value = int(today.Laatste / 1000)
+			state.Terug.Km = int(today.Laatste / 1000)
 			state.Terug.Editable = true
 		} else {
-			state.Terug.Value = today.Terug
+			state.Terug.Km = today.Terug
 		}
 	}
 	jsonEncoder := json.NewEncoder(w)

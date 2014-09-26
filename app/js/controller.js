@@ -15,9 +15,19 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         todayHighlight: true
     });
 
+    function formatDate(d){
+        return padStr(d.getDate()) + '-' + padStr(d.getMonth()+1) + '-' + d.getFullYear();
+    }
+    function padStr(i) {
+       return (i < 10) ? "0" + i : i;
+    }
+
     $scope.getState = function(){
         $http.get('state/'+ $routeParams.id).success(function(data){
             $scope.form = data;
+            var date = new Date();
+            $scope.form.Date = formatDate(date);
+            console.log(data);
             var toFocus;
             if (data.Begin.Editable === true){
                 toFocus = 'Begin';
