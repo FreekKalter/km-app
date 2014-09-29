@@ -4,7 +4,7 @@ var kmApp = angular.module('kmApp', ['ngRoute', 'kmControllers' ,'kmAnimations' 
 kmApp.config(['$routeProvider', function($routeProvider, $locationProvider){
     var d = new Date();
     $routeProvider.
-    when('/input/:id', {
+    when('/input/:date', {
         templateUrl: 'partials/input.html',
         controller: 'kmInput'
     }).

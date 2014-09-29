@@ -16,49 +16,57 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     });
 
     function formatDate(d){
-        return padStr(d.getDate()) + '-' + padStr(d.getMonth()+1) + '-' + d.getFullYear();
+        d = d.split("");
+        return d.slice(0,2).join("") + "-" + d.slice(2,4).join("") + "-" + d.slice(4,8).join("");
     }
     function padStr(i) {
        return (i < 10) ? "0" + i : i;
     }
 
-    $scope.getState = function(){
-        $http.get('state/'+ $routeParams.id).success(function(data){
-            $scope.form = data;
-            var date = new Date();
+    $scope.getState = function(date){
+        $http.get('state/'+ date).success(function(data){
+            $scope.form  = data;
+            console.log($scope.form);
+            //deepcopy, otherwise form and original will point to the same thing
+            // if performance becomes an issue here, make a custom copy function
+            $scope.original = JSON.parse(JSON.stringify(data));
             $scope.form.Date = formatDate(date);
-            console.log(data);
             var toFocus;
-            if (data.Begin.Editable === true){
-                toFocus = 'Begin';
-            }else if(data.Eerste.Editable === true){
-                toFocus = 'Eerste';
-            }else if(data.Laatste.Editable === true){
-                toFocus = 'Laatste';
-            }else if(data.Terug.Editable === true){
-                toFocus = 'Terug';
-            }
             if(toFocus !== undefined){
                 setTimeout(function(){ setFocus(document.getElementById(toFocus)); }, 100);
             }
         });
     };
 
-    $scope.save = function(name, fieldValue){
-        var id = $scope.id || $routeParams.id;
-        $http.post('/save/kilometers/' + id, {name: name, value: fieldValue}).success(function(data){
-            if(name === 'Terug'){
-                $location.path('/overview');
-            }else{
-                $scope.id = data;
-                $scope.form[name].Editable=false;
-                $scope.getState();
-            }
-        });
+    $scope.init = function(){
+        var date = $routeParams.date;
+        if ( date == "today" ){
+            var d = new Date();
+            date = padStr(d.getDate())+padStr(d.getMonth()+1)+padStr(d.getFullYear());
+        }
+        $scope.getState(date);
     };
 
-    $scope.edit = function(name){
-        $scope.form[name].Editable=true;
+    $scope.$watchCollection('[form.Date]', function(newValues, oldValues){
+        if(typeof newValues[0] != 'undefined' && newValues[0] != ""){
+            $scope.getState(newValues[0].replace(/-/g, ""));
+        }
+    });
+
+    $scope.save = function(name, fieldValue){
+        var id = $scope.id || $routeParams.id;
+        if( $scope.original.Begin.Km != $scope.form.Begin.Km ){
+            console.log($scope.form.Begin.Km);
+        }
+        //$http.post('/save/kilometers/' + id, {name: name, value: fieldValue}).success(function(data){
+            //if(name === 'Terug'){
+                //$location.path('/overview');
+            //}else{
+                //$scope.id = data;
+                //$scope.form[name].Editable=false;
+                //$scope.getState();
+            //}
+        //});
     };
 
     $scope.goTo = function(address){
@@ -73,7 +81,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         var strl = el.value.length;
         el.setSelectionRange(strl,strl);
     }
-    $scope.getState();
+    $scope.init();
 });
 
 kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http){

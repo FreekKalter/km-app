@@ -15,41 +15,27 @@
                 </div>
             </div>
         </div>
-        <div ng-repeat="field in fields">
+        <div ng-repeat="field in form.Fields">
             <div class="form-group">
-                <label for="{{field}}" class="control-label col-sm-2">{{field}}</label>
+                <label for="{{field.Name}}" class="control-label col-sm-2">{{field.Name}}</label>
                 <div class="col-sm-10">
                     <!-- kilometer field -->
-                    <ng-switch on="form[field].Editable">
-                        <div ng-switch-when="false" class="input-group has-success">
-                            <div class="input-group-addon"><span class="glyphicon glyphicon-road"></span></div>
-                            <input autocomplete="off" type="number" ng-model="form[field].Km" id="{{field}}" name="{{field}}"
-                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
-                        </div>
-                        <div ng-switch-when="true" class="input-group">
-                            <div class="input-group-addon"><span class="glyphicon glyphicon-road"></span></div>
-                            <input autocomplete="off" type="number" ng-model="form[field].Km" id="{{field}}" name="{{field}}"
-                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
-                        </div>
-                    </ng-switch>
-                    <ng-switch on="form[field].Editable">
-                        <div ng-switch-when="false" class="has-success input-group">
-                            <div class="input-group-addon"><span class="glyphicon glyphicon-time"></span></div>
-                            <input autocomplete="off" type="number" ng-model="form[field].Time" id="{{field}}" name="{{field}}"
-                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
-                        </div>
-                        <div ng-switch-when="true" class="input-group">
-                            <div class="input-group-addon"><span class="glyphicon glyphicon-time"></span></div>
-                            <input autocomplete="off" type="number" ng-model="form[field].Time" id="{{field}}" name="{{field}}"
-                                   onfocus="this.value=this.value" ng-enter="save('{{field}}', form.{{field}}.Value)" class="form-control" integer />
-                        </div>
-                    </ng-switch>
+                    <div  class="input-group">
+                        <div class="input-group-addon"><span class="glyphicon glyphicon-road"></span></div>
+                        <input autocomplete="off" type="number" ng-model="field.Km" id="{{field.Name}}" name="{{field}}"
+                               onfocus="this.value=this.value" ng-enter="save()" class="form-control" integer />
+                    </div>
+                    <div class="input-group">
+                        <div class="input-group-addon"><span class="glyphicon glyphicon-time"></span></div>
+                        <input autocomplete="off"  ng-model="field.Time" id="{{field.Name}}" name="{{field}}"
+                               onfocus="this.value=this.value" ng-enter="save()" class="form-control"  />
+                    </div>
                 </div><!-- col-sm-10 -->
             </div><!-- form group -->
         </div> <!-- ng-repeat -->
         <div class="col-sm-10">
             <div class="form-group">
-                <button type="sumbit" class="btn btn-default">Save</button>
+                <button class="btn btn-default" ng-click="save()">Save</button>
             </div>
         </div><!--button column -->
     </form>

@@ -80,7 +80,7 @@ func NewServer(dbName string, config Config) *Server {
 	}
 
 	s.HandleFunc("/", s.homeHandler).Methods("GET")
-	s.HandleFunc("/state/{id}", s.stateHandler).Methods("GET")
+	s.HandleFunc("/state/{date}", s.stateHandler).Methods("GET")
 	s.HandleFunc("/save/kilometers/{id}", s.saveKilometersHandler).Methods("POST")
 	s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
@@ -177,39 +177,35 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id := vars["id"]
-
-	now := time.Now().UTC()
-	dateStr := fmt.Sprintf("%d-%d-%d", now.Month(), now.Day(), now.Year())
+	date, err := time.Parse("02012006", vars["date"])
+	s.log.Println(date)
+	if err != nil {
+		http.Error(w, InvalidId.String(), InvalidId.Code)
+		return
+	}
+	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
 	type Field struct {
-		Km, Time int
-		Editable bool
+		Km   int
+		Time string
+		Name string
 	}
 	type State struct {
-		Begin, Eerste, Laatste, Terug Field
-		LastDayError                  string
+		Fields       []Field
+		LastDayError string
 	}
 	var state State
+	state.Fields = make([]Field, 4)
 
-	// Get data save for this day
+	// Get data save for this date
 	var today Kilometers
-	var err error
-	if id == "today" {
-		err = s.Dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
-	} else {
-		if _, err := strconv.ParseInt(id, 10, 64); err != nil {
-			http.Error(w, InvalidId.String(), InvalidId.Code)
-			return
-		}
-		err = s.Dbmap.SelectOne(&today, "select * from kilometers where id=$1", id)
-	}
+	err = s.Dbmap.SelectOne(&today, "select * from kilometers where date=$1", dateStr)
 	s.log.Println(err)
 	switch {
 	case err != nil && err.Error() != "sql: no rows in result set":
 		http.Error(w, "Database error", 500)
 		s.log.Println("stateHandler:", err)
 		return
-	case err != nil && err.Error() == "sql: no rows in result set": // today not saved yet TODO: check this
+	case err != nil && err.Error() == "sql: no rows in result set": // today not saved yet
 		s.log.Println("no today")
 		var lastDay Kilometers
 		err := s.Dbmap.SelectOne(&lastDay, "select * from kilometers where date = (select max(date) as date from kilometers)")
@@ -219,10 +215,10 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if lastDay != (Kilometers{}) { // Nothing in db yet
-			state.Begin = Field{Km: lastDay.getMax(), Time: 0, Editable: true}
-			state.Eerste = Field{Km: 0, Time: 0, Editable: true}
-			state.Laatste = Field{Km: 0, Time: 0, Editable: true}
-			state.Terug = Field{Km: 0, Time: 0, Editable: true}
+			state.Fields[0] = Field{Km: lastDay.getMax(), Name: "Begin"}
+			state.Fields[1] = Field{Name: "Eerste"}
+			state.Fields[2] = Field{Name: "Laatste"}
+			state.Fields[3] = Field{Name: "Terug"}
 		}
 
 		var lastDayTimes Times
@@ -232,31 +228,21 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 				state.LastDayError = fmt.Sprintf("overview/tijden/%d/%d", lastDayTimes.Date.Year(), lastDayTimes.Date.Month())
 			}
 		}
+
 	default: // Something is already filled in for today
 		s.log.Println("today:", today)
-		if today.Begin != 0 {
-			state.Begin.Km = today.Begin
-		} else {
-			state.Begin.Editable = true
+		var times Times
+		err = s.Dbmap.SelectOne(&times, "select * from times where date=$1", dateStr)
+		loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
+		if err != nil {
+			s.log.Println(err)
 		}
-		if today.Eerste == 0 {
-			state.Eerste.Km = int(today.Begin / 1000)
-			state.Eerste.Editable = true
-		} else {
-			state.Eerste.Km = today.Eerste
-		}
-		if today.Laatste == 0 {
-			state.Laatste.Km = int(today.Eerste / 1000)
-			state.Laatste.Editable = true
-		} else {
-			state.Laatste.Km = today.Laatste
-		}
-		if today.Terug == 0 {
-			state.Terug.Km = int(today.Laatste / 1000)
-			state.Terug.Editable = true
-		} else {
-			state.Terug.Km = today.Terug
-		}
+		checkin := time.Unix(times.CheckIn, 0).In(loc).Format("15:04")
+		checkout := time.Unix(times.CheckOut, 0).In(loc).Format("15:04")
+		state.Fields[0] = Field{Km: today.Begin, Name: "Begin"}
+		state.Fields[1] = Field{Km: today.Eerste, Name: "Eerste", Time: checkin}
+		state.Fields[2] = Field{Km: today.Laatste, Name: "Laatste", Time: checkout}
+		state.Fields[3] = Field{Km: today.Terug, Name: "Terug"}
 	}
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(state)
