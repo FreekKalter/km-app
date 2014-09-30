@@ -38,14 +38,14 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         });
     };
 
-    $scope.init = function(){
+    function getDateString(){
         var date = $routeParams.date;
         if ( date == "today" ){
             var d = new Date();
             date = padStr(d.getDate())+padStr(d.getMonth()+1)+padStr(d.getFullYear());
         }
-        $scope.getState(date);
-    };
+        return date;
+    }
 
     $scope.$watchCollection('[form.Date]', function(newValues, oldValues){
         if(typeof newValues[0] != 'undefined' && newValues[0] != ""){
@@ -55,18 +55,25 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
 
     $scope.save = function(name, fieldValue){
         var id = $scope.id || $routeParams.id;
-        if( $scope.original.Begin.Km != $scope.form.Begin.Km ){
-            console.log($scope.form.Begin.Km);
+        var toSave = [];
+        var original = $scope.original.Fields;
+        var form = $scope.form.Fields;
+        for(var i=0; i<original.length; i++){
+            if(original[i].Km != form[i].Km || original[i].Time != form[i].Time){
+                toSave[toSave.length] = {Name: form[i].Name, Km: form[i].Km, Time: form[i].Time};
+            }
         }
-        //$http.post('/save/kilometers/' + id, {name: name, value: fieldValue}).success(function(data){
-            //if(name === 'Terug'){
-                //$location.path('/overview');
-            //}else{
-                //$scope.id = data;
-                //$scope.form[name].Editable=false;
-                //$scope.getState();
-            //}
-        //});
+        console.log(toSave);
+        if(toSave.length > 0){
+            $http.post('/save/' + getDateString(), toSave).success(function(data){
+                // als laatste element van toSave Terug is, klaar voor vandaag -> ga naar overview
+                if(toSave[toSave.length-1].Name =="Terug"){
+                    $location.path('/overview');
+                }else{
+                    $scope.getState();
+                }
+            });
+        }
     };
 
     $scope.goTo = function(address){
@@ -81,7 +88,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         var strl = el.value.length;
         el.setSelectionRange(strl,strl);
     }
-    $scope.init();
+    $scope.getState(getDateString());
 });
 
 kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http){
@@ -184,19 +191,19 @@ kmApp.directive('integer', function() {
                         return viewValue;
                     }
                     if(attrs.id === 'Eerste'){
-                        if(viewValue >= scope.form.Begin.Value){
+                        if(viewValue >= scope.form.Fields[0].Km){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id === 'Laatste'){
-                        if(viewValue >= scope.form.Eerste.Value){
+                        if(viewValue >= scope.form.Fields[1].Km){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id === 'Terug'){
-                        if(viewValue >= scope.form.Laatste.Value){
+                        if(viewValue >= scope.form.Fields[2].Km){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
