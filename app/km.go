@@ -81,8 +81,9 @@ func NewServer(dbName string, config Config) *Server {
 
 	s.HandleFunc("/", s.homeHandler).Methods("GET")
 	s.HandleFunc("/state/{date}", s.stateHandler).Methods("GET")
-	s.HandleFunc("/save/kilometers/{id}", s.saveKilometersHandler).Methods("POST")
-	s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
+	s.HandleFunc("/save/{date}", s.saveHandler).Methods("POST")
+	//s.HandleFunc("/save/kilometers/{id}", s.saveKilometersHandler).Methods("POST")
+	//s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
 	s.HandleFunc("/delete/{id}", s.deleteHandler).Methods("GET")
 	s.HandleFunc("/csv/{year}/{month}", s.csvHandler).Methods("GET")
@@ -175,6 +176,67 @@ func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type Field struct {
+	Km   int
+	Time string
+	Name string
+}
+
+func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	date, err := time.Parse("02012006", vars["date"])
+	if err != nil {
+		http.Error(w, InvalidId.String(), InvalidId.Code)
+		return
+	}
+	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
+	s.log.Println(dateStr)
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, NotParsable.String(), NotParsable.Code)
+		s.log.Println(err)
+		return
+	}
+	var fields []Field
+	err = json.Unmarshal(body, &fields)
+	if err != nil {
+		http.Error(w, NotParsable.String(), NotParsable.Code)
+		s.log.Println(err)
+		return
+	}
+	s.log.Println(fields)
+	//TODO: sanitize input
+
+	today := new(Kilometers)
+	s.log.Println("initialized today struct:", today)
+	err = s.Dbmap.SelectOne(today, "select * from kilometers where date=$1", dateStr)
+	if err == nil { // there is already data for today (so use update)
+		for _, field := range fields {
+			today.addField(field)
+		}
+		_, err = s.Dbmap.Update(today)
+		if err != nil {
+			http.Error(w, DbError.String(), DbError.Code)
+			s.log.Println(err)
+			return
+		}
+
+	} else { // nog niks opgeslagen voor vandaag}
+		today := new(Kilometers)
+		today.Date = date
+		for _, field := range fields {
+			today.addField(field)
+		}
+		s.log.Println("hele struct die geinsert gaat worden", today)
+		err = s.Dbmap.Insert(today)
+		if err != nil {
+			http.Error(w, DbError.String(), DbError.Code)
+			s.log.Println(err)
+			return
+		}
+	}
+}
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, err := time.Parse("02012006", vars["date"])
@@ -184,11 +246,6 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
-	type Field struct {
-		Km   int
-		Time string
-		Name string
-	}
 	type State struct {
 		Fields       []Field
 		LastDayError string

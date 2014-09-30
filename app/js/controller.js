@@ -70,7 +70,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
                 if(toSave[toSave.length-1].Name =="Terug"){
                     $location.path('/overview');
                 }else{
-                    $scope.getState();
+                    $scope.getState(getDateString());
                 }
             });
         }
