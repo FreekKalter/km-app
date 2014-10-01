@@ -19,6 +19,10 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         d = d.split("");
         return d.slice(0,2).join("") + "-" + d.slice(2,4).join("") + "-" + d.slice(4,8).join("");
     }
+    function getTimeStamp(t){
+        var d = new Date();
+        return padStr(d.getHours()) + ":" + padStr(d.getMinutes())
+    }
     function padStr(i) {
        return (i < 10) ? "0" + i : i;
     }
@@ -31,6 +35,20 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
             // if performance becomes an issue here, make a custom copy function
             $scope.original = JSON.parse(JSON.stringify(data));
             $scope.form.Date = formatDate(date);
+            var fields = $scope.form.Fields;
+            for(var i=0; i<fields.length; i++ ){
+                if (fields[i].Time == ""){
+                    fields[i].Time = getTimeStamp();
+                    break;
+                }
+            }
+            for(var i=1; i<fields.length; i++){
+                if(fields[i].Km == 0){
+                    fields[i].Km = Math.floor(fields[i-1].Km/1000);
+                    break;
+                }
+
+            }
             var toFocus;
             if(toFocus !== undefined){
                 setTimeout(function(){ setFocus(document.getElementById(toFocus)); }, 100);

@@ -38,15 +38,18 @@ func (k *Kilometers) addPost(pv PostValue) {
 	}
 }
 
-func (k *Kilometers) addField(field Field) {
-	switch field.Name {
-	case "Begin":
-		k.Begin = field.Km
-	case "Eerste":
-		k.Eerste = field.Km
-	case "Laatste":
-		k.Laatste = field.Km
-	case "Terug":
-		k.Terug = field.Km
+func (k *Kilometers) addFields(fields []Field) {
+	for _, field := range fields {
+		switch field.Name {
+		case "Begin":
+			k.Begin = field.Km
+		case "Eerste":
+			k.Eerste = field.Km
+		case "Laatste":
+			k.Laatste = field.Km
+		case "Terug":
+			k.Terug = field.Km
+		}
+
 	}
 }

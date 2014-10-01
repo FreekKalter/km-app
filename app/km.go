@@ -60,7 +60,7 @@ func NewServer(dbName string, config Config) *Server {
 	var Dbmap *gorp.DbMap
 	Dbmap = &gorp.DbMap{Db: db, Dialect: gorp.PostgresDialect{}}
 	Dbmap.AddTable(Kilometers{}).SetKeys(true, "Id")
-	Dbmap.AddTable(Times{}).SetKeys(false, "Id")
+	Dbmap.AddTable(Times{}).SetKeys(true, "Id")
 
 	var templates *template.Template
 	if config.Env == "testing" {
@@ -86,7 +86,7 @@ func NewServer(dbName string, config Config) *Server {
 	//s.HandleFunc("/save/times/{id}", s.saveTimesHandler).Methods("POST")
 	s.HandleFunc("/overview/{category}/{year}/{month}", s.overviewHandler).Methods("GET")
 	s.HandleFunc("/delete/{id}", s.deleteHandler).Methods("GET")
-	s.HandleFunc("/csv/{year}/{month}", s.csvHandler).Methods("GET")
+	//s.HandleFunc("/csv/{year}/{month}", s.csvHandler).Methods("GET")
 	return s
 }
 
@@ -125,12 +125,12 @@ type PostValue struct {
 	Value int
 }
 
-type Times struct {
-	Id       int64
-	Date     time.Time
-	CheckIn  int64
-	CheckOut int64
-}
+//type Times struct {
+//Id       int64
+//Date     time.Time
+//CheckIn  int64
+//CheckOut int64
+//}
 
 func timeStamp(s *Server, action string, kilometersId int64) {
 	id, err := s.Dbmap.SelectInt("select Id from times where date=$1", getDateStr())
@@ -182,7 +182,37 @@ type Field struct {
 	Name string
 }
 
+/// Save times
+type Times struct {
+	Id                                int64
+	Date                              time.Time
+	Begin, CheckIn, CheckOut, Laatste int64
+}
+
+func (t *Times) updateObject(s *Server, date string, fields []Field) error {
+	loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
+	for _, field := range fields {
+		fieldLocalTime, err := time.ParseInLocation("1-2-2006 15:04", fmt.Sprintf("%s %s", date, field.Time), loc)
+		s.log.Println(fieldLocalTime)
+		if err != nil {
+			return err
+		}
+		fieldTime := fieldLocalTime.UTC().Unix()
+		switch field.Name {
+		case "Begin":
+			t.Begin = fieldTime
+		case "Eerste":
+			t.CheckIn = fieldTime
+		case "Laatste":
+			t.CheckOut = fieldTime
+		case "Terug":
+			t.Laatste = fieldTime
+		}
+	}
+	return nil
+}
 func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
+	// parse date
 	vars := mux.Vars(r)
 	date, err := time.Parse("02012006", vars["date"])
 	if err != nil {
@@ -192,6 +222,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	dateStr := fmt.Sprintf("%d-%d-%d", date.Month(), date.Day(), date.Year())
 	s.log.Println(dateStr)
 
+	// parse posted data
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, NotParsable.String(), NotParsable.Code)
@@ -208,34 +239,44 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	s.log.Println(fields)
 	//TODO: sanitize input
 
-	today := new(Kilometers)
-	s.log.Println("initialized today struct:", today)
-	err = s.Dbmap.SelectOne(today, "select * from kilometers where date=$1", dateStr)
-	if err == nil { // there is already data for today (so use update)
-		for _, field := range fields {
-			today.addField(field)
-		}
-		_, err = s.Dbmap.Update(today)
-		if err != nil {
-			http.Error(w, DbError.String(), DbError.Code)
-			s.log.Println(err)
-			return
-		}
-
+	/// Save kilometers
+	km := new(Kilometers)
+	s.log.Println("initialized km struct:", km)
+	err = s.Dbmap.SelectOne(km, "select * from kilometers where date=$1", dateStr)
+	if err == nil { // there is already data for km (so use update)
+		km.addFields(fields)
+		_, err = s.Dbmap.Update(km)
 	} else { // nog niks opgeslagen voor vandaag}
-		today := new(Kilometers)
-		today.Date = date
-		for _, field := range fields {
-			today.addField(field)
-		}
-		s.log.Println("hele struct die geinsert gaat worden", today)
-		err = s.Dbmap.Insert(today)
-		if err != nil {
-			http.Error(w, DbError.String(), DbError.Code)
-			s.log.Println(err)
-			return
-		}
+		km := new(Kilometers)
+		km.Date = date
+		km.addFields(fields)
+		s.log.Println("hele struct die geinsert gaat worden", km)
+		err = s.Dbmap.Insert(km)
 	}
+	if err != nil {
+		http.Error(w, DbError.String(), DbError.Code)
+		s.log.Println(err)
+		return
+	}
+	// save Times
+	times := new(Times)
+	err = s.Dbmap.SelectOne(times, "select * from times where date=$1", dateStr)
+	if err == nil {
+		times.updateObject(s, dateStr, fields)
+		_, err = s.Dbmap.Update(times)
+	} else {
+		times := new(Times)
+		times.Date = date
+		times.updateObject(s, dateStr, fields)
+		err = s.Dbmap.Insert(times)
+	}
+	if err != nil {
+		http.Error(w, DbError.String(), DbError.Code)
+		s.log.Println(err)
+		return
+	}
+	s.log.Printf("%+v\n", times)
+
 }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -294,114 +335,119 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			s.log.Println(err)
 		}
-		checkin := time.Unix(times.CheckIn, 0).In(loc).Format("15:04")
-		checkout := time.Unix(times.CheckOut, 0).In(loc).Format("15:04")
-		state.Fields[0] = Field{Km: today.Begin, Name: "Begin"}
-		state.Fields[1] = Field{Km: today.Eerste, Name: "Eerste", Time: checkin}
-		state.Fields[2] = Field{Km: today.Laatste, Name: "Laatste", Time: checkout}
-		state.Fields[3] = Field{Km: today.Terug, Name: "Terug"}
+		convertTime := func(t int64) string {
+			ret := ""
+			if t != 0 {
+				ret = time.Unix(t, 0).In(loc).Format("15:04")
+			}
+			return ret
+		}
+		state.Fields[0] = Field{Km: today.Begin, Name: "Begin", Time: convertTime(times.Begin)}
+		state.Fields[1] = Field{Km: today.Eerste, Name: "Eerste", Time: convertTime(times.CheckIn)}
+		state.Fields[2] = Field{Km: today.Laatste, Name: "Laatste", Time: convertTime(times.CheckOut)}
+		state.Fields[3] = Field{Km: today.Terug, Name: "Terug", Time: convertTime(times.Laatste)}
 	}
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(state)
 }
 
 func (s *Server) overviewHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	category := vars["category"]
-	month, err := strconv.ParseInt(vars["month"], 10, 64)
-	if err != nil {
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-		s.log.Println("overview:", err)
-		return
-	}
-	year, err := strconv.ParseInt(vars["year"], 10, 64)
-	if err != nil {
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-		s.log.Println("overview:", err)
-		return
-	}
-	s.log.Println("overview", year, month)
+	//vars := mux.Vars(r)
+	//category := vars["category"]
+	//month, err := strconv.ParseInt(vars["month"], 10, 64)
+	//if err != nil {
+	//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+	//s.log.Println("overview:", err)
+	//return
+	//}
+	//year, err := strconv.ParseInt(vars["year"], 10, 64)
+	//if err != nil {
+	//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+	//s.log.Println("overview:", err)
+	//return
+	//}
+	//s.log.Println("overview", year, month)
 
-	jsonEncoder := json.NewEncoder(w)
-	switch category {
-	case "kilometers":
-		all := make([]Kilometers, 0)
-		_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
-		if err != nil {
-			http.Error(w, DbError.String(), DbError.Code)
-			s.log.Println("overview:", err)
-			return
-		}
-		jsonEncoder.Encode(all)
-	case "tijden":
-		rows, err := getAllTimes(s, year, month)
-		if err != nil {
-			http.Error(w, DbError.String(), DbError.Code)
-			s.log.Println("overview:", err)
-		}
-		jsonEncoder.Encode(rows)
-	default:
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-		return
-	}
+	//jsonEncoder := json.NewEncoder(w)
+	//switch category {
+	//case "kilometers":
+	//all := make([]Kilometers, 0)
+	//_, err := s.Dbmap.Select(&all, "select * from kilometers where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+	//if err != nil {
+	//http.Error(w, DbError.String(), DbError.Code)
+	//s.log.Println("overview:", err)
+	//return
+	//}
+	//jsonEncoder.Encode(all)
+	//case "tijden":
+	//rows, err := getAllTimes(s, year, month)
+	//if err != nil {
+	//http.Error(w, DbError.String(), DbError.Code)
+	//s.log.Println("overview:", err)
+	//}
+	//jsonEncoder.Encode(rows)
+	//default:
+	//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+	//return
+	//}
 }
 
-func getAllTimes(s *Server, year, month int64) (rows []TimeRow, err error) {
-	var all []Times
-	rows = make([]TimeRow, 0)
-	_, err = s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
-	if err != nil {
-		return rows, err
-	}
-	loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
-	if err != nil {
-		s.log.Println(err)
-	}
-	for _, c := range all {
-		var row TimeRow
-		row.Id = c.Id
-		row.Date = c.Date
-		if c.CheckIn != 0 {
-			row.CheckIn = time.Unix(c.CheckIn, 0).In(loc).Format("15:04")
-		} else {
-			row.CheckIn = "-"
-		}
-		if c.CheckOut != 0 {
-			row.CheckOut = time.Unix(c.CheckOut, 0).In(loc).Format("15:04")
-		} else {
-			row.CheckOut = "-"
-		}
-		if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
-			row.Hours = hours
-		}
-		rows = append(rows, row)
-	}
-	return rows, nil
-}
+//func getAllTimes(s *Server, year, month int64) (rows []TimeRow, err error) {
+//var all []Times
+//rows = make([]TimeRow, 0)
+//_, err = s.Dbmap.Select(&all, "select * from times where extract (year from date)=$1 and extract (month from date)=$2 order by date desc ", year, month)
+//if err != nil {
+//return rows, err
+//}
+//loc, err := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
+//if err != nil {
+//s.log.Println(err)
+//}
+//for _, c := range all {
+//var row TimeRow
+//row.Id = c.Id
+//row.Date = c.Date
+//if c.CheckIn != 0 {
+//row.CheckIn = time.Unix(c.CheckIn, 0).In(loc).Format("15:04")
+//} else {
+//row.CheckIn = "-"
+//}
+//if c.CheckOut != 0 {
+//row.CheckOut = time.Unix(c.CheckOut, 0).In(loc).Format("15:04")
+//} else {
+//row.CheckOut = "-"
+//}
+//if hours := (time.Duration(c.CheckOut-c.CheckIn) * time.Second).Hours(); hours > 0 && hours < 24 {
+//row.Hours = hours
+//}
+//rows = append(rows, row)
+//}
+//return rows, nil
+//}
 
-func (s *Server) csvHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	month, err := strconv.ParseInt(vars["month"], 10, 64)
-	if err != nil {
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-		s.log.Println("overview:", err)
-		return
-	}
-	year, err := strconv.ParseInt(vars["year"], 10, 64)
-	if err != nil {
-		http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
-		s.log.Println("overview:", err)
-		return
-	}
-	times, err := getAllTimes(s, year, month)
-	if err != nil {
-		http.Error(w, DbError.String(), DbError.Code)
-		s.log.Println("overview:", err)
-	}
-	for _, t := range times {
-		fmt.Fprintf(w, "%s,%s,%s,%.1f\n", t.Date.Format("Mon 2"), t.CheckIn, t.CheckOut, t.Hours)
-	}
-}
+//func (s *Server) csvHandler(w http.ResponseWriter, r *http.Request) {
+//vars := mux.Vars(r)
+//month, err := strconv.ParseInt(vars["month"], 10, 64)
+//if err != nil {
+//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+//s.log.Println("overview:", err)
+//return
+//}
+//year, err := strconv.ParseInt(vars["year"], 10, 64)
+//if err != nil {
+//http.Error(w, InvalidUrl.String(), InvalidUrl.Code)
+//s.log.Println("overview:", err)
+//return
+//}
+//times, err := getAllTimes(s, year, month)
+//if err != nil {
+//http.Error(w, DbError.String(), DbError.Code)
+//s.log.Println("overview:", err)
+//}
+//for _, t := range times {
+//fmt.Fprintf(w, "%s,%s,%s,%.1f\n", t.Date.Format("Mon 2"), t.CheckIn, t.CheckOut, t.Hours)
+//}
+//}
 
 func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
