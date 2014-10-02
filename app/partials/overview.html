@@ -22,10 +22,10 @@
                         <td>{{kilometer.Laatste}}</td>
                         <td>{{kilometer.Terug}}</td>
                         <td class="buttons">
-                            <button type="button" class="btn btn-sm" ng-click="editRow($index)">
+                            <button type="button" class="btn btn-sm" ng-click="edit(kilometer.Date)">
                                 <span class="glyphicon glyphicon-pencil"></span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow($index)">
+                            <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow(kilometer.Date)">
                                 <span class="glyphicon glyphicon-remove-sign"></span>
                             </button>
                         </td>
@@ -40,34 +40,25 @@
             <thead>
                 <tr>
                     <th>Date</th>
+                    <th>Begin</th>
                     <th>Checkin</th>
                     <th>Checkout</th>
+                    <th>Terug</th>
                     <th>Aantal uur</th>
                 </tr>
             </thead>
             <tbody>
                 <tr ng-repeat="t in times" class="repeated-item">
                     <td>{{t.Date |date:'EEE dd-MM-yyyy'}}</td>
-                    <td>
-                        <ng-switch on="t.Editable">
-                            <input id="checkin" ng-switch-when="true" type="text" ng-model="t.CheckIn"></input>
-                            <span ng-switch-default>{{t.CheckIn}}</span>
-                        </ng-switch>
-                    </td>
-                    <td>
-                        <ng-switch on="t.Editable">
-                            <input id="checkout" ng-switch-when="true" type="text" ng-model="t.CheckOut"></input>
-                            <span ng-switch-default>{{t.CheckOut}}</span>
-                        </ng-switch>
-                    </td>
+                    <td><span>{{t.Begin}}</span></td>
+                    <td> <span>{{t.CheckIn}}</span> </td>
+                    <td> <span>{{t.CheckOut}}</span> </td>
+                    <td><span>{{t.Laatste}}</span></td>
                     <td>{{t.Hours | number:1}}</td>
                     <td class="buttons">
-                        <ng-switch on="t.Editable">
-                            <button ng-switch-default type="button" class="btn btn-sm" ng-click="editTime($index)">
-                                <span class="glyphicon glyphicon-pencil"></span>
-                            </button>
-                            <button ng-switch-when="true" ng-click="saveTime($index, t.Date, t.CheckIn, t.CheckOut)">Save</button>
-                        </ng-switch>
+                        <button type="button" class="btn btn-sm" ng-click="edit(t.Date)">
+                            <span class="glyphicon glyphicon-pencil"></span>
+                        </button>
                     </td>
                 </tr>
             </tbody>

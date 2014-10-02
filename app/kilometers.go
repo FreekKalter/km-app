@@ -25,19 +25,6 @@ func (k *Kilometers) getMax() int {
 	return 0
 }
 
-func (k *Kilometers) addPost(pv PostValue) {
-	switch pv.Name {
-	case "Begin":
-		k.Begin = pv.Value
-	case "Eerste":
-		k.Eerste = pv.Value
-	case "Laatste":
-		k.Laatste = pv.Value
-	case "Terug":
-		k.Terug = pv.Value
-	}
-}
-
 func (k *Kilometers) addFields(fields []Field) {
 	for _, field := range fields {
 		switch field.Name {

@@ -35,25 +35,41 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
             // if performance becomes an issue here, make a custom copy function
             $scope.original = JSON.parse(JSON.stringify(data));
             $scope.form.Date = formatDate(date);
+
             var fields = $scope.form.Fields;
+            if(fields[0].Km == 0){
+                fields[0].Km = data.LastDayKm;
+            }else{
+                for(var i=1; i<fields.length; i++){
+                    if(fields[i].Km == 0){
+                        fields[i].Km = Math.floor(fields[i-1].Km/1000);
+                        break;
+                    }
+                }
+            }
             for(var i=0; i<fields.length; i++ ){
                 if (fields[i].Time == ""){
                     fields[i].Time = getTimeStamp();
                     break;
                 }
             }
-            for(var i=1; i<fields.length; i++){
-                if(fields[i].Km == 0){
-                    fields[i].Km = Math.floor(fields[i-1].Km/1000);
-                    break;
-                }
-
-            }
             var toFocus;
             if(toFocus !== undefined){
                 setTimeout(function(){ setFocus(document.getElementById(toFocus)); }, 100);
             }
         });
+    };
+
+    $scope.updateTime = function(fieldname){
+        if(fieldname == "Begin"){
+            $scope.form.Fields[0].Time = getTimeStamp();
+        }else if(fieldname == "Eerste"){
+            $scope.form.Fields[1].Time = getTimeStamp();
+        }else if(fieldname == "Laatste"){
+            $scope.form.Fields[2].Time = getTimeStamp();
+        }else if (fieldname == "Terug"){
+            $scope.form.Fields[3].Time = getTimeStamp();
+        }
     };
 
     function getDateString(){
@@ -65,11 +81,11 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         return date;
     }
 
-    $scope.$watchCollection('[form.Date]', function(newValues, oldValues){
-        if(typeof newValues[0] != 'undefined' && newValues[0] != ""){
-            $scope.getState(newValues[0].replace(/-/g, ""));
-        }
-    });
+    //$scope.$watchCollection('[form.Date]', function(newValues, oldValues){
+        //if(typeof newValues[0] != 'undefined' && newValues[0] != ""){
+            //$scope.getState(newValues[0].replace(/-/g, ""));
+        //}
+    //});
 
     $scope.save = function(name, fieldValue){
         var id = $scope.id || $routeParams.id;
@@ -109,7 +125,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     $scope.getState(getDateString());
 });
 
-kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http){
+kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http, $filter){
 
     // Get tabs accesable via bookmarkeble url: bit of a hacky solution!!
     //
@@ -131,7 +147,6 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
     }
 
     $scope.loadData = function(category){
-        $scope.testVar = false;
         var path = [ 'overview', category, $routeParams.year, $routeParams.month].join('/');
         if(category === $routeParams.category){
             if(category === 'kilometers'){
@@ -148,28 +163,15 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
         }
     };
 
-    $scope.deleteRow = function(index){
-        $http.get('delete/' + $scope.kilometers[index].Id ).success(function(data){
-            $scope.kilometers.splice(index, 1); // delete ellemnt from array (delete undefines element)
+    $scope.deleteRow = function(date){
+        $http.get('delete/' + $filter('date')(date, 'ddMMyyyy') ).success(function(data){
+            $scope.loadData()
         });
     };
 
-    $scope.editRow = function(index){
-        $location.path('/input/' + $scope.kilometers[index].Id);
-    };
-
-    $scope.editTime = function(index){
-        $scope.times[index].Editable = true;
-    };
-
-    $scope.saveTime = function(index){
-        var parsed = new Date($scope.times[index].Date);
-        var dateStr =  parsed.getDate() + '-' + (parsed.getMonth()+1) + '-' +  parsed.getFullYear();
-
-        $http.post('/save/times/' + $scope.times[index].Id, {date: dateStr,  checkin: $scope.times[index].CheckIn, checkout: $scope.times[index].CheckOut}).success(function(data){
-            $scope.times[index].Editable = false;
-        });
-
+    $scope.edit = function(date){
+        var dateId = $filter('date')(date, 'ddMMyyyy');
+        $location.path('/input/' + dateId);
     };
 
     $scope.go = function(path){

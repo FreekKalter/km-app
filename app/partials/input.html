@@ -26,7 +26,7 @@
                                onfocus="this.value=this.value" ng-enter="save()" class="form-control" integer />
                     </div>
                     <div class="input-group">
-                        <div class="input-group-addon"><span class="glyphicon glyphicon-time"></span></div>
+                        <div class="input-group-addon"><span class="glyphicon glyphicon-time" ng-click="updateTime($index)"></span></div>
                         <input autocomplete="off"  ng-model="field.Time" id="{{field.Name}}" name="{{field}}"
                                onfocus="this.value=this.value" ng-enter="save()" class="form-control"  />
                     </div>
