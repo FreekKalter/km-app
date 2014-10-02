@@ -60,16 +60,8 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         });
     };
 
-    $scope.updateTime = function(fieldname){
-        if(fieldname == "Begin"){
-            $scope.form.Fields[0].Time = getTimeStamp();
-        }else if(fieldname == "Eerste"){
-            $scope.form.Fields[1].Time = getTimeStamp();
-        }else if(fieldname == "Laatste"){
-            $scope.form.Fields[2].Time = getTimeStamp();
-        }else if (fieldname == "Terug"){
-            $scope.form.Fields[3].Time = getTimeStamp();
-        }
+    $scope.updateTime = function(index){
+        $scope.form.Fields[index].Time = getTimeStamp();
     };
 
     function getDateString(){
