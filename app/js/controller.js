@@ -97,7 +97,6 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     },true);
 
     $scope.save = function(name, fieldValue){
-        var id = $scope.id || $routeParams.id;
         var toSave = [];
         var original = $scope.original.Fields;
         var form = $scope.form.Fields;
@@ -115,7 +114,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
                 }else{
                     $scope.getState(getDateString());
                 }
-            });
+            }); // TODO: show some sort of error if the post failes (possibly with timeout)
         }
     };
 
