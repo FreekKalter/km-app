@@ -37,6 +37,11 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
             $scope.form.Date = formatDate(date);
 
             var fields = $scope.form.Fields;
+            for(var i=0; i<fields.length; i++){
+                if(fields[i].Km != 0) {
+                    fields[i].Saved = true;
+                }
+            }
             if(fields[0].Km == 0){
                 fields[0].Km = data.LastDayKm;
             }else{
@@ -73,11 +78,23 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         return date;
     }
 
-    //$scope.$watchCollection('[form.Date]', function(newValues, oldValues){
-        //if(typeof newValues[0] != 'undefined' && newValues[0] != ""){
-            //$scope.getState(newValues[0].replace(/-/g, ""));
-        //}
-    //});
+    $scope.$watch('form.Date', function(newValues, oldValues){
+        if(typeof newValues != 'undefined' && newValues != ""){
+            $scope.getState(newValues.replace(/-/g, ""));
+        }
+    });
+
+    $scope.$watch('form.Fields', function(newValue,oldValue){
+        for(var i=0; i< newValue.length; i++){
+            var kmSaved = newValue[i].Km != 0 && newValue[i].Km == $scope.original.Fields[i].Km;
+            var timeSaved = newValue[i].Time != 0 && newValue[i].Time == $scope.original.Fields[i].Time;
+            if(kmSaved && timeSaved){
+                $scope.form.Fields[i].Saved = true;
+            }else{
+                $scope.form.Fields[i].Saved = false;
+            }
+        }
+    },true);
 
     $scope.save = function(name, fieldValue){
         var id = $scope.id || $routeParams.id;
