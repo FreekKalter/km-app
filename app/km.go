@@ -321,13 +321,6 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			state.Fields[2] = Field{Name: "Laatste"}
 			state.Fields[3] = Field{Name: "Terug"}
 		}
-		//TODO: check of gister vergeten in/uit te klokken is
-		var lastDayTimes Times
-		err = s.Dbmap.SelectOne(&lastDayTimes, "select * from times where date=(select max(date) as date from times)")
-		s.log.Println("na select laatste tijden:", err, lastDayTimes)
-		if lastDayTimes.CheckIn == 0 || lastDayTimes.CheckOut == 0 {
-			state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes.Date.Day(), lastDayTimes.Date.Month(), lastDayTimes.Date.Year())
-		}
 
 	default: // Something is already filled in for today
 		s.log.Println("today:", today)
@@ -349,6 +342,12 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		state.Fields[2] = Field{Km: today.Laatste, Name: "Laatste", Time: convertTime(times.CheckOut)}
 		state.Fields[3] = Field{Km: today.Terug, Name: "Terug", Time: convertTime(times.Laatste)}
 		s.log.Printf("state: %+v", state)
+	}
+	var lastDayTimes Times
+	err = s.Dbmap.SelectOne(&lastDayTimes, "select * from times where date=(select max(date) as date from times)")
+	s.log.Println("na select laatste tijden:", err, lastDayTimes)
+	if lastDayTimes.CheckIn == 0 || lastDayTimes.CheckOut == 0 {
+		state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes.Date.Day(), lastDayTimes.Date.Month(), lastDayTimes.Date.Year())
 	}
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(state)
