@@ -29,7 +29,7 @@
                             <button type="button" class="btn btn-sm" ng-click="edit(kilometer.Date)">
                                 <span class="glyphicon glyphicon-pencil"></span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow(kilometer.Date)">
+                            <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow(kilometer.Date, $index)">
                                 <span class="glyphicon glyphicon-remove-sign"></span>
                             </button>
                         </td>
@@ -63,7 +63,7 @@
                         <button type="button" class="btn btn-sm" ng-click="edit(t.Date)">
                             <span class="glyphicon glyphicon-pencil"></span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow(t.Date)">
+                        <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow(t.Date, $index)">
                             <span class="glyphicon glyphicon-remove-sign"></span>
                         </button>
                     </td>

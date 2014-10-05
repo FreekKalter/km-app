@@ -172,9 +172,13 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
         }
     };
 
-    $scope.deleteRow = function(date){
+    $scope.deleteRow = function(date, index){
         $http.get('delete/' + $filter('date')(date, 'ddMMyyyy') ).success(function(data){
-            $scope.loadData()
+            if($routeParams.category == 'tijden'){
+                $scope.times.splice(index,1);
+            }else{
+                $scope.kilometers.splice(index,1);
+            }
         });
     };
 

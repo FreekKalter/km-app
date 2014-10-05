@@ -43,8 +43,9 @@ app/js/master.js: app/js/angular-combined.anno.min.js
 		app/js/angular-route.min.js\
 		app/js/angular-animate.min.js\
 		app/js/ui-bootstrap-custom-tpls-0.7.0.Minimale.min.js\
+		app/js/bootstrap-datepicker.js\
 		app/js/angular-combined.anno.min.js\
-		> app/js/master.js
+		| sed '/^\/\//d' > app/js/master.js
 
 
 # target: clean - Removes minified CSS and JS files.
