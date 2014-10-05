@@ -1,5 +1,9 @@
-<a class="btn btn-primary" href="#/input/today">today</a>
-
+<div class="row header">
+    <div class="col-sm-10">
+        <a class="btn btn-primary btn-sm" ng-hide="overview" href="#/overview">overview</a>
+        <a class="btn btn-primary btn-sm" ng-hide="input" href="#/input/today">input</a>
+    </div>
+</div>
 <tabset>
     <tab heading="Kilometers" select="loadData('kilometers')" active="kiloActive">
         <div class="table-responsive">
@@ -58,6 +62,9 @@
                     <td class="buttons">
                         <button type="button" class="btn btn-sm" ng-click="edit(t.Date)">
                             <span class="glyphicon glyphicon-pencil"></span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" ng-click="deleteRow(t.Date)">
+                            <span class="glyphicon glyphicon-remove-sign"></span>
                         </button>
                     </td>
                 </tr>

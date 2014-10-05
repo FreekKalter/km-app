@@ -6,6 +6,7 @@
 var kmControllers = angular.module('kmControllers', []);
 
 kmControllers.controller('kmInput', function($scope,$routeParams, $location, $http){
+    $scope.input=true;
     $scope.fields = [ 'Begin', 'Eerste', 'Laatste', 'Terug' ];
     $('#datumprik').datepicker({
         format: "dd-mm-yyyy",
@@ -30,7 +31,6 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     $scope.getState = function(date){
         $http.get('state/'+ date).success(function(data){
             $scope.form  = data;
-            console.log($scope.form);
             //deepcopy, otherwise form and original will point to the same thing
             // if performance becomes an issue here, make a custom copy function
             $scope.original = JSON.parse(JSON.stringify(data));
@@ -85,6 +85,9 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     });
 
     $scope.$watch('form.Fields', function(newValue,oldValue){
+        if(newValue == undefined){
+            return;
+        }
         for(var i=0; i< newValue.length; i++){
             var kmSaved = newValue[i].Km != 0 && newValue[i].Km == $scope.original.Fields[i].Km;
             var timeSaved = newValue[i].Time != 0 && newValue[i].Time == $scope.original.Fields[i].Time;
@@ -105,7 +108,6 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
                 toSave[toSave.length] = {Name: form[i].Name, Km: form[i].Km, Time: form[i].Time};
             }
         }
-        console.log(toSave);
         if(toSave.length > 0){
             $http.post('/save/' + getDateString(), toSave).success(function(data){
                 // als laatste element van toSave Terug is, klaar voor vandaag -> ga naar overview
@@ -134,7 +136,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
 });
 
 kmControllers.controller('kmOverviewController', function($scope,$routeParams, $location, $http, $filter){
-
+    $scope.overview = true;
     // Get tabs accesable via bookmarkeble url: bit of a hacky solution!!
     //
     // Load data has 2 functions
@@ -153,7 +155,6 @@ kmControllers.controller('kmOverviewController', function($scope,$routeParams, $
     if($routeParams.category === 'tijden'){
         $scope.timesActive = true;
     }
-
     $scope.loadData = function(category){
         var path = [ 'overview', category, $routeParams.year, $routeParams.month].join('/');
         if(category === $routeParams.category){
