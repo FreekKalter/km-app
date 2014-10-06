@@ -8,8 +8,14 @@ h1 a, a:hover {
     text-decoration: none;
 }
 
-.header {
-    margin: 5px;
+.row.header {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 0px;
+}
+
+.header .col-sm-10{
+    padding:0px;
 }
 .css-form input.ng-invalid.ng-dirty {
     border-color: #FA787E;

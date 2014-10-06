@@ -233,7 +233,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		s.log.Println(err)
 		return
 	}
-	s.log.Println(fields)
+	s.log.Printf("parsed array of fields to save: %+v\n", fields)
 	//TODO: sanitize input
 
 	/// Save kilometers
@@ -321,6 +321,12 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 			state.Fields[2] = Field{Name: "Laatste"}
 			state.Fields[3] = Field{Name: "Terug"}
 		}
+		var lastDayTimes Times
+		err = s.Dbmap.SelectOne(&lastDayTimes, "select * from times where date=(select max(date) as date from times)")
+		s.log.Println("na select laatste tijden:", err, lastDayTimes)
+		if lastDayTimes.CheckIn == 0 || lastDayTimes.CheckOut == 0 {
+			state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes.Date.Day(), lastDayTimes.Date.Month(), lastDayTimes.Date.Year())
+		}
 
 	default: // Something is already filled in for today
 		s.log.Println("today:", today)
@@ -342,12 +348,16 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		state.Fields[2] = Field{Km: today.Laatste, Name: "Laatste", Time: convertTime(times.CheckOut)}
 		state.Fields[3] = Field{Km: today.Terug, Name: "Terug", Time: convertTime(times.Laatste)}
 		s.log.Printf("state: %+v", state)
-	}
-	var lastDayTimes Times
-	err = s.Dbmap.SelectOne(&lastDayTimes, "select * from times where date=(select max(date) as date from times)")
-	s.log.Println("na select laatste tijden:", err, lastDayTimes)
-	if lastDayTimes.CheckIn == 0 || lastDayTimes.CheckOut == 0 {
-		state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes.Date.Day(), lastDayTimes.Date.Month(), lastDayTimes.Date.Year())
+
+		var lastDayTimes []Times
+		_, err = s.Dbmap.Select(&lastDayTimes, "select * from times order by date desc limit 2")
+		if err != nil {
+			s.log.Println("probeer laatste twee tijden op te halen:", err)
+		}
+		s.log.Println("tijden van gisteren, (vandaag al half ingevuld):", err, lastDayTimes[1])
+		if lastDayTimes[1].CheckIn == 0 || lastDayTimes[1].CheckOut == 0 {
+			state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes[1].Date.Day(), lastDayTimes[1].Date.Month(), lastDayTimes[1].Date.Year())
+		}
 	}
 	jsonEncoder := json.NewEncoder(w)
 	jsonEncoder.Encode(state)

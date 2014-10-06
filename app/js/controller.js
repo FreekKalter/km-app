@@ -10,6 +10,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
     $scope.fields = [ 'Begin', 'Eerste', 'Laatste', 'Terug' ];
     $('#datumprik').datepicker({
         format: "dd-mm-yyyy",
+        forceParse: true,
         weekStart: 1,
         calendarWeeks: true,
         autoclose: true,
@@ -80,7 +81,8 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
 
     $scope.$watch('form.Date', function(newValues, oldValues){
         if(typeof newValues != 'undefined' && newValues != ""){
-            $scope.getState(newValues.replace(/-/g, ""));
+            var dateStr = newValues.replace(/-/g, "");
+            $scope.getState(dateStr);
         }
     });
 
@@ -103,18 +105,20 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         var toSave = [];
         var original = $scope.original.Fields;
         var form = $scope.form.Fields;
+        var dateStr =  $scope.form.Date.replace(/-/g, "");
         for(var i=0; i<original.length; i++){
             if(original[i].Km != form[i].Km || original[i].Time != form[i].Time){
                 toSave[toSave.length] = {Name: form[i].Name, Km: form[i].Km, Time: form[i].Time};
             }
         }
+        console.log(toSave);
         if(toSave.length > 0){
-            $http.post('/save/' + getDateString(), toSave).success(function(data){
+            $http.post('/save/' + dateStr, toSave).success(function(data){
                 // als laatste element van toSave Terug is, klaar voor vandaag -> ga naar overview
                 if(toSave[toSave.length-1].Name =="Terug"){
                     $location.path('/overview');
                 }else{
-                    $scope.getState(getDateString());
+                    $scope.getState(dateStr);
                 }
             }); // TODO: show some sort of error if the post failes (possibly with timeout)
         }
