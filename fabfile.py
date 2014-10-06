@@ -40,9 +40,10 @@ def buildContainers(name=None):
     local("make app/km minify")
     local('mkdir -p nginx/static/js')
     local('mkdir -p nginx/static/css')
-    local('cp -R app/js/* nginx/static/js/')
-    local('cp -R app/css/* nginx/static/css/')
-    local('cp app/favicon.ico nginx/static')
+    local('mkdir -p nginx/static/img')
+    local('cp -R app/img nginx/static')
+    local('cp -R app/js nginx/static')
+    local('cp -R app/css nginx/static')
     local('cp -R app/partials nginx/static')
 
     local("cp config-production.yml app/config.yml")
