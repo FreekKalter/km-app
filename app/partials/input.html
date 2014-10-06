@@ -29,11 +29,11 @@
             <div class="form-group">
                 <label for="{{field.Name}}" class="control-label col-sm-2">{{field.Name}}</label>
                 <div class="col-sm-10">
-                    <!-- kilometer field -->
                     <div class="input-group" ng-class="{'has-success':field.Saved}">
                         <div class="input-group-addon"><span class="glyphicon glyphicon-road"></span></div>
                         <input autocomplete="off" type="number" ng-model="field.Km" id="{{field.Name}}" name="{{field}}"
                         onfocus="this.value=this.value" ng-enter="save()" class="form-control" integer />
+
                         <div class="input-group-addon" ng-click="updateTime($index)"><span class="glyphicon glyphicon-time" ></span></div>
                         <input autocomplete="off"  ng-model="field.Time" id="{{field.Name}}" name="{{field}}"
                            onfocus="this.value=this.value" ng-enter="save()" class="form-control"  />

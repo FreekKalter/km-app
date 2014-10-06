@@ -97,7 +97,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
                 $scope.form.Fields[i].Saved = false;
             }
         }
-    },true);
+    },true); // last arguments sets true object comparison
 
     $scope.save = function(name, fieldValue){
         var toSave = [];
