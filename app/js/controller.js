@@ -74,7 +74,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         var date = $routeParams.date;
         if ( date == "today" ){
             var d = new Date();
-            date = padStr(d.getDate())+padStr(d.getMonth()+1)+padStr(d.getFullYear());
+            date = "" + padStr(d.getDate())+padStr(d.getMonth()+1)+padStr(d.getFullYear());
         }
         return date;
     }
