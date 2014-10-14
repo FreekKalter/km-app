@@ -129,41 +129,6 @@ type Config struct {
 	Log string
 }
 
-func timeStamp(s *Server, action string, kilometersId int64) {
-	id, err := s.Dbmap.SelectInt("select Id from times where date=$1", getDateStr())
-	if err != nil {
-		s.log.Println("timestamp:", err)
-		return
-	}
-	today := new(Times)
-	now := time.Now().Unix()
-	if id == 0 { // no times saved for today
-		today.Date = time.Now()
-		today.Id = kilometersId
-		s.log.Println("timestamp:", kilometersId, today.Id)
-		switch action {
-		case "in":
-			today.CheckIn = now
-		case "out":
-			today.CheckOut = now
-		}
-		s.Dbmap.Insert(today)
-	} else {
-		err = s.Dbmap.SelectOne(today, "select * from times where id=$1", id)
-		if err != nil {
-			s.log.Println("timestamp:", err)
-			return
-		}
-		switch action {
-		case "in":
-			today.CheckIn = now
-		case "out":
-			today.CheckOut = now
-		}
-		s.Dbmap.Update(today)
-	}
-}
-
 func (s *Server) homeHandler(w http.ResponseWriter, r *http.Request) {
 	if s.config.Env == "testing" {
 		t, _ := template.ParseFiles("index.html")
