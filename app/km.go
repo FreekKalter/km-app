@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/fcgi"
 
 	"os"
 	"strconv"
@@ -120,7 +119,8 @@ func main() {
 	if config.Env == "testing" {
 		http.Serve(listener, nil)
 	} else {
-		fcgi.Serve(listener, nil)
+		http.Serve(listener, nil)
+		//fcgi.Serve(listener, nil)
 	}
 }
 
@@ -244,6 +244,7 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// sla eerste stand van vandaag op als laatste stand van gister (als die vergeten is)
 }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
+	s.log.Printf("%+v\n", r.Header)
 	vars := mux.Vars(r)
 	date, err := time.Parse("02012006", vars["date"])
 	s.log.Println(date)

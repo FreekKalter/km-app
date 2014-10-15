@@ -82,6 +82,7 @@ def runProduction(method, buildName=None):
 
     method("docker run -d -p 443:443 --link km_production:app --name nginx\
                           -v /home/fkalter/km/ssl:/etc/nginx/conf:ro \
+                          -v /home/fkalter/km/log:/log\
                           freekkalter/nginx:deploy /start_nginx")
 
 def rollback():
