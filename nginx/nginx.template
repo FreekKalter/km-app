@@ -32,7 +32,7 @@ http {
         ##
 
         access_log /log/nginx/access.log;
-        error_log /log/nginx/error.log debug;
+        error_log /log/nginx/error.log;
 
         ##
         # Gzip Settings
