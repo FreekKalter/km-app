@@ -7,9 +7,14 @@ server {
 	root /var/www;
 	index index.html index.htm;
 
+    # This is for the server side certificate (signed by start_ssl)
+    # and encrypts the connection and gets the green little lock in the browser
 	ssl_certificate 	        /etc/nginx/conf/ssl-unified.crt;
 	ssl_certificate_key 	    /etc/nginx/conf/server.key;
 
+    # This is selfsigned certififcate pair for client-side authentication
+    # and is completely seperate from the server-side certificate
+    # this one is only used for authentication of the client (as a replacement for usernama/password)
     ssl_client_certificate      /etc/nginx/conf/client.ca.crt;
     ssl_verify_client           optional;
 
