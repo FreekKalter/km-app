@@ -28,11 +28,14 @@ def localDeploy():
 
 def deploy():
     if not os.environ.has_key('NO_DOCKER_BUILD'):
-        buildContainers()
+        if os.environ.has_key('MANUAL'):
+            buildContainers('MANUAL')
+        else:
+            buildContainers()
         pushContainers()
     run("docker pull freekkalter/km-app")
     run("docker pull freekkalter/nginx")
-    runProduction(run)
+    runProduction(run, 'MANUAL')
 
 def buildContainers(name=None):
     if not name:
