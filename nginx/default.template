@@ -60,15 +60,12 @@ server {
 
 	location / {
         proxy_pass http://FASTCGI_PASS;
-        proxy_set_header VERIFIED "";
-        proxy_set_header VERIFIED $ssl_client_verify;
-		#try_files $uri $uri/ =404;
-        #include             fastcgi_params;
-        #fastcgi_keep_conn   on;
-        #fastcgi_param       VERIFIED $ssl_client_verify;
-        #fastcgi_param       DN $ssl_client_s_dn;
-        #fastcgi_param       TESTING "dude";
-		#fastcgi_pass        FASTCGI_PASS;
+        # not necessary in this case because there is only one client and the connection
+        # gets terminated before the location blocks. If we want to implement different users
+        # uncomment below and handle the VERIFIED field in the backend to keep users apart.
+        #proxy_set_header VERIFIED "";
+        #proxy_set_header VERIFIED $ssl_client_verify;
+        #-----
 	}
 }
 # You may add here your
