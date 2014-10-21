@@ -38,22 +38,24 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
             $scope.form.Date = formatDate(date);
 
             var fields = $scope.form.Fields;
+            var latestSaved = 0;
             for(var i=0; i<fields.length; i++){
                 if(fields[i].Km != 0) {
                     fields[i].Saved = true;
+                    latestSaved=i;
                 }
             }
             if(fields[0].Km == 0){
                 fields[0].Km = data.LastDayKm;
             }else{
-                for(var i=1; i<fields.length; i++){
+                for(var i=latestSaved; i<fields.length; i++){
                     if(fields[i].Km == 0){
                         fields[i].Km = Math.floor(fields[i-1].Km/1000);
                         break;
                     }
                 }
             }
-            for(var i=0; i<fields.length; i++ ){
+            for(var i=latestSaved; i<fields.length; i++ ){
                 if (fields[i].Time == ""){
                     fields[i].Time = getTimeStamp();
                     break;
@@ -107,6 +109,7 @@ kmControllers.controller('kmInput', function($scope,$routeParams, $location, $ht
         var form = $scope.form.Fields;
         var dateStr =  $scope.form.Date.replace(/-/g, "");
         for(var i=0; i<original.length; i++){
+            console.log(original[i].Km, form[i].Km);
             if(original[i].Km != form[i].Km || original[i].Time != form[i].Time){
                 toSave[toSave.length] = {Name: form[i].Name, Km: form[i].Km, Time: form[i].Time};
             }
@@ -223,33 +226,33 @@ kmApp.directive('integer', function() {
             ctrl.$parsers.unshift(function(viewValue) {
                 if (INTEGER_REGEXP.test(viewValue)) {
                     // it is valid
+                    var form = scope.form.Fields;
                     if(attrs.id === 'Begin'){
                         ctrl.$setValidity('integer', true);
                         return viewValue;
                     }
                     if(attrs.id === 'Eerste'){
-                        if(viewValue >= scope.form.Fields[0].Km){
+                        if(viewValue >= form[0].Km){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id === 'Laatste'){
-                        if(viewValue >= scope.form.Fields[1].Km){
+                        if(viewValue >= form[1].Km){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
                     if(attrs.id === 'Terug'){
-                        if(viewValue >= scope.form.Fields[2].Km){
+                        if(viewValue >= form[2].Km){
                             ctrl.$setValidity('integer', true);
                             return viewValue;
                         }
                     }
-
                 }
                 // it is invalid, return undefined (no model update)
                 ctrl.$setValidity('integer', false);
-                return undefined;
+                return viewValue;
             });
         }
     };

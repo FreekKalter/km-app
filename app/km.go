@@ -154,6 +154,10 @@ type Times struct {
 func (t *Times) updateObject(s *Server, date string, fields []Field) error {
 	loc, _ := time.LoadLocation("Europe/Amsterdam") // should not be hardcoded but idgaf
 	for _, field := range fields {
+		if field.Time == "" {
+			continue
+		}
+		s.log.Println(field.Name, field.Time)
 		fieldLocalTime, err := time.ParseInLocation("1-2-2006 15:04", fmt.Sprintf("%s %s", date, field.Time), loc)
 		s.log.Println(fieldLocalTime)
 		if err != nil {
@@ -232,7 +236,12 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 		s.log.Printf("object to be insterted: %+v\n", times)
 		err = s.Dbmap.Insert(times)
 	} else if err == nil {
-		times.updateObject(s, dateStr, fields)
+		s.log.Printf("times object to update VOOR invoegen van de op te slaan velden: %+v\n", times)
+		err = times.updateObject(s, dateStr, fields)
+		if err != nil {
+			s.log.Println(err)
+		}
+		s.log.Printf("times object to update NA invoegen van de op te slaan velden: %+v\n", times)
 		_, err = s.Dbmap.Update(times)
 	}
 	if err != nil {
@@ -244,7 +253,6 @@ func (s *Server) saveHandler(w http.ResponseWriter, r *http.Request) {
 	// sla eerste stand van vandaag op als laatste stand van gister (als die vergeten is)
 }
 func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
-	s.log.Printf("%+v\n", r.Header)
 	vars := mux.Vars(r)
 	date, err := time.Parse("02012006", vars["date"])
 	s.log.Println(date)
