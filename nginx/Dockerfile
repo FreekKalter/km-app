@@ -32,4 +32,5 @@ RUN chmod +x /start_nginx
 
 ADD default.template /etc/nginx/sites-available/default.template
 ADD nginx.template /etc/nginx/nginx.template
+ADD client_auth.conf /etc/nginx/client_auth.conf
 ADD static /static

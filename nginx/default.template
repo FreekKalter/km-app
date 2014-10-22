@@ -33,23 +33,18 @@ server {
     gzip_types      *;
     #gzip_comp_level 8;
 
-    location /favicon.ico {
-        root /static;
-    }
-
-    if ($ssl_client_verify != SUCCESS){
-        return 403;
-    }
-
     location /js/ {
+        include /etc/nginx/client_auth.conf;
         root /static;
     }
 
     location /css/ {
+        include /etc/nginx/client_auth.conf;
         root /static;
     }
 
     location /partials/ {
+        include /etc/nginx/client_auth.conf;
         root /static;
     }
 
@@ -59,6 +54,7 @@ server {
 
 
 	location / {
+        include /etc/nginx/client_auth.conf;
         proxy_pass http://FASTCGI_PASS;
         # not necessary in this case because there is only one client and the connection
         # gets terminated before the location blocks. If we want to implement different users
