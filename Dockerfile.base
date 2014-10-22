@@ -22,7 +22,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B97B0AFCAA1A47F044F
 RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ saucy-pgdg main" >> /etc/apt/sources.list.d/pgdg.list
 
 RUN apt-get update
-# RUN apt-get upgrade
+RUN apt-get upgrade -y
 
 RUN apt-get -y install postgresql-9.2 postgresql-client-9.2 postgresql-contrib-9.2 sudo supervisor
 

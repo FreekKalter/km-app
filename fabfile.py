@@ -9,6 +9,11 @@ env.use_ssh_config = True
 #env.key_filename = '/var/lib/jenkins/.ssh/id_rsa'
 env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
+def cleanOldBuilds():
+    latest = getLatestBuildNr('local')
+    latest =latest-10
+    # TODO: docker rmi every image older than latest -10
+
 def localTest():
     killContainers(local)
     local('docker run  -v /home/fkalter/km/postgresdata:/data:rw\
@@ -35,15 +40,13 @@ def deploy():
     runProduction(run)
 
 def manualDeploy():
-    buildContainers('MANUL')
+    buildContainers('MANUAL')
     pushContainers()
     run("docker pull freekkalter/km-app")
     run("docker pull freekkalter/nginx")
     runProduction(run, 'MANUAL')
 
 def buildContainers(name=None):
-    if not name:
-        name = os.environ['BUILD_NUMBER']
     local("make app/km minify")
     local('mkdir -p nginx/static/js')
     local('mkdir -p nginx/static/css')
@@ -52,16 +55,22 @@ def buildContainers(name=None):
     local('cp -R app/js nginx/static')
     local('cp -R app/css nginx/static')
     local('cp -R app/partials nginx/static')
-
     local("cp config-production.yml app/config.yml")
 
     latest =  getLatestBuildNr('local')
-    print latest
+    buildDockerFile(latest)
+    if not name:
+        name = os.environ['BUILD_NUMBER']
+        local('echo "RUN apt-get update && apt-get upgrade -y">> Dockerfile')
+        local('docker build --no-cache -t freekkalter/km-app:{} .'.format(name))
+    else:
+        local("docker build -t freekkalter/km-app:{} .".format(name))
+    local("docker build -t freekkalter/nginx:deploy nginx")
+
+def buildDockerFile(base):
     with open('Dockerfile.template', 'r') as i, open('Dockerfile', 'w') as o:
         for l in i.xreadlines():
-            o.write(l.replace('BASE', str(latest)))
-    local("docker build -t freekkalter/km-app:{} .".format(name))
-    local("docker build -t freekkalter/nginx:deploy nginx")
+            o.write(l.replace('BASE', str(base)))
 
 def pushContainers():
     local("docker push freekkalter/km-app")
