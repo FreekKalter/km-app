@@ -10,9 +10,9 @@ env.use_ssh_config = True
 env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
 def cleanOldBuilds():
-    latest = getLatestBuildNr('local')
-    latest =latest-10
-    # TODO: docker rmi every image older than latest -10
+    nrs = local("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n ", capture=True).split()
+    for n in nrs[:-10]:
+        local('docker rmi freekkalter/km-app:{}'.format(n))
 
 def localTest():
     killContainers(local)
