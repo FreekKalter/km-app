@@ -33,12 +33,12 @@ server {
     gzip_types      *;
     #gzip_comp_level 8;
 
-    if ($ssl_client_verify != SUCCESS){
-        return 403;
-    }
-
     location /favicon.ico {
         root /static;
+    }
+
+    if ($ssl_client_verify != SUCCESS){
+        return 403;
     }
 
     location /js/ {
