@@ -9,10 +9,15 @@ env.use_ssh_config = True
 #env.key_filename = '/var/lib/jenkins/.ssh/id_rsa'
 env.hosts.extend(['fkalter@km-app.kalteronline.org'])
 
-def cleanOldBuilds():
-    nrs = local("docker images | awk '{ if(match($2, /^[0-9]+$/)) print $2}' | sort -n ", capture=True).split()
-    for n in nrs[:-10]:
-        local('docker rmi freekkalter/km-app:{}'.format(n))
+def cleanOldBuilds(location):
+    if location =='local':
+        nrs = local("docker images | awk '{ if(match($2, /^[0-9]+$/) && match($1, /freekkalter\/km-app/)) print $2}' | sort -n ", capture=True).split()
+        for n in nrs[:-10]:
+            local('docker rmi freekkalter/km-app:{}'.format(n))
+    elif location=='remote':
+        nrs = run("docker images | awk '{ if(match($2, /^[0-9]+$/) && match($1, /freekkalter\/km-app/)) print $2}' | sort -n ").split()
+        for n in nrs[:-10]:
+            run('docker rmi freekkalter/km-app:{}'.format(n))
 
 def localTest():
     killContainers(local)
