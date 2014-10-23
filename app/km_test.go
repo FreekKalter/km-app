@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/coopernurse/gorp"
 	_ "github.com/lib/pq"
@@ -38,10 +40,10 @@ func tableDrivenTest(t *testing.T, table []*TestCombo) {
 		resp := tc.resp
 
 		if w.Code != resp.Code {
-			t.Fatalf("code = %d, want %d", w.Code, resp.Code)
+			t.Fatalf("%s : code = %d, want %d", tc.req.URL, w.Code, resp.Code)
 		}
-		if b := w.Body.String(); !resp.Regex.MatchString(b) {
-			t.Fatalf("body = %q, want '%s'", b, resp.String())
+		if b := w.Body.String(); resp.Regex != nil && !resp.Regex.MatchString(b) {
+			t.Fatalf("%s: body = %q, want '%s'", tc.req.URL, b, resp.String())
 		}
 	}
 }
@@ -63,7 +65,9 @@ func TestDelete(t *testing.T) {
 	clearTable(t, "kilometers")
 
 	// add a row, save id
-	k := Kilometers{Begin: 1234}
+	todayStr := getTodayString()
+	now := time.Now()
+	k := Kilometers{Date: now, Begin: 1234}
 	err := db.Insert(&k)
 	if err != nil {
 		t.Fatal("TestDelete: dberror on insert", err)
@@ -75,9 +79,14 @@ func TestDelete(t *testing.T) {
 		NewTestCombo("/delete/a", InvalidId),
 		NewTestCombo("/delete/-1", InvalidId),
 		// delete saved row, compare returned id
-		NewTestCombo("/delete/"+id, newResponse(id+"\n", 200)),
+		NewTestCombo("/delete/"+id, InvalidId),
+		NewTestCombo("/delete/"+todayStr, Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
+}
+func getTodayString() string {
+	today := time.Now()
+	return fmt.Sprintf("%d%d%d", today.Day(), today.Month(), today.Year())
 }
 
 func TestSave(t *testing.T) {
@@ -87,44 +96,50 @@ func TestSave(t *testing.T) {
 		NewTestCombo("/save", NotFound),
 		NewTestCombo("/save/a", NotFound),
 	}
+	todayStr := getTodayString()
 	req, _ := http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": 1234}`))
-	table = append(table, &TestCombo{req, OkId})
+	table = append(table, &TestCombo{req, Response{Code: 404}})
 
-	req, _ = http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "Begin", "Value": "abc"}`))
+	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "Begin", "Value": "abc"}`))
 	table = append(table, &TestCombo{req, NotParsable})
 
-	req, _ = http.NewRequest("POST", "/save/kilometers/today", strings.NewReader(`{"Name": "InvalidFieldname", "Value": 1234}`))
-	table = append(table, &TestCombo{req, UnknownField})
+	req, _ = http.NewRequest("POST", "/save/"+todayStr, strings.NewReader(`{"Name": "InvalidFieldname", "Value": 1234}`))
+	table = append(table, &TestCombo{req, NotParsable})
+	//TODO: add more test here
 
 	tableDrivenTest(t, table)
 }
 
 func TestHome(t *testing.T) {
-	req, _ := http.NewRequest("GET", "/", nil)
-	w := httptest.NewRecorder()
-	s.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Fatal("expected 200 got ", w.Code)
+	var table []*TestCombo = []*TestCombo{
+		NewTestCombo("/", Response{Code: 200}),
 	}
+	tableDrivenTest(t, table)
 }
 
 func TestState(t *testing.T) {
+	todayStr := getTodayString()
+	now := time.Now()
+	k := Kilometers{Date: now, Begin: 1234}
+	err := db.Insert(&k)
+	if err != nil {
+		t.Fatal("TestDelete: dberror on insert", err)
+	}
 	var table []*TestCombo = []*TestCombo{
 		NewTestCombo("/state", NotFound),
 		NewTestCombo("/state/2234a", InvalidId),
+		NewTestCombo("/state/today", InvalidId),
+		NewTestCombo("/state/"+todayStr, Response{Code: 200}),
 	}
 	tableDrivenTest(t, table)
 
-	req, _ := http.NewRequest("GET", "/state/today", nil)
+	req, _ := http.NewRequest("GET", "/state/"+todayStr, nil)
 	w := httptest.NewRecorder()
 	s.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Fatal("expected 200 got ", w.Code)
-	}
 	var unMarschalled interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &unMarschalled)
+	err = json.Unmarshal(w.Body.Bytes(), &unMarschalled)
 	if err != nil {
-		t.Fatal("/state/today not a valid json response:", err)
+		t.Fatal("/state/"+todayStr+" not a valid json response:", err)
 	}
 }
 

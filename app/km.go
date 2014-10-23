@@ -275,7 +275,7 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 	s.log.Println(err)
 	switch {
 	case err != nil && err.Error() != "sql: no rows in result set":
-		http.Error(w, "Database error", 500)
+		http.Error(w, DbError.String(), DbError.Code)
 		s.log.Println("stateHandler:", err)
 		return
 	case err != nil && err.Error() == "sql: no rows in result set": // today not saved yet
@@ -328,9 +328,12 @@ func (s *Server) stateHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			s.log.Println("probeer laatste twee tijden op te halen:", err)
 		}
-		s.log.Println("tijden van gisteren, (vandaag al half ingevuld):", err, lastDayTimes[1])
-		if lastDayTimes[1].CheckIn == 0 || lastDayTimes[1].CheckOut == 0 {
-			state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes[1].Date.Day(), lastDayTimes[1].Date.Month(), lastDayTimes[1].Date.Year())
+		if len(lastDayTimes) > 1 {
+			s.log.Println("tijden van gisteren, (vandaag al half ingevuld):", err, lastDayTimes[1])
+			if lastDayTimes[1].CheckIn == 0 || lastDayTimes[1].CheckOut == 0 {
+				state.LastDayError = fmt.Sprintf("input/%02d%02d%04d", lastDayTimes[1].Date.Day(), lastDayTimes[1].Date.Month(), lastDayTimes[1].Date.Year())
+			}
+
 		}
 	}
 	jsonEncoder := json.NewEncoder(w)
