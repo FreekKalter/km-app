@@ -1,5 +1,5 @@
 app/km: app/km.go app/kilometers.go app/errors.go app/db.go
-	go build -o app/km app/km.go app/kilometers.go app/errors.go app/db.go
+	go build -o app/km ./app
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
 # suffix will be ignored.
