@@ -21,12 +21,22 @@ func TestUpdate(t *testing.T) {
 
 	dateStr := fmt.Sprintf("%d-%d-%d", testDate.Month(), testDate.Day(), testDate.Year())
 	ti := Times{}
-	ti.updateObject(s, dateStr, fields)
+	err := ti.updateObject(s, dateStr, fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if ti.Begin != cmpDate {
-		t.Fatalf("updating fields failed: expected %d got %d", cmpDate, ti.Begin)
+		t.Fatalf("updating Begin field: expected %d got %d", cmpDate, ti.Begin)
 	}
 
 	if ti.CheckIn != 0 || ti.CheckOut != 0 || ti.Laatste != 0 {
-		t.Fatalf("only update 1 field of testtime struct, all other fields should be 0 but there not %+v", ti)
+		t.Fatalf("only 1 field should change %+v", ti)
+	}
+
+	ti = Times{}
+	fields = []Field{Field{Km: 123456, Time: "jemoeder", Name: "Begin"}}
+	if ti.updateObject(s, dateStr, fields) == nil {
+		t.Fatal("updateObjects should fail on invalid time field")
 	}
 }
