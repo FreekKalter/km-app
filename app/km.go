@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/FreekKalter/km"
+	"bitbucket.org/FreekKalter/km"
 	"launchpad.net/goyaml"
 )
 
