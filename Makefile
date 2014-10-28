@@ -1,4 +1,6 @@
-app/km: app/km.go
+.PHONY: app/km
+app/km:
+	go install bitbucket.org/FreekKalter/km
 	go build -o app/km ./app
 
 # Patterns matching CSS files that should be minified. Files with a .min.css
