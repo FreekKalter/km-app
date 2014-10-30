@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/http"
 
+	"log"
+
 	"bitbucket.org/FreekKalter/km"
 	"launchpad.net/goyaml"
 )
@@ -24,8 +26,7 @@ func main() {
 	defer s.Dbmap.Db.Close()
 
 	http.Handle("/", s)
-	l := s.GetLogger()
-	l.Printf("started... (%s)\n", config.Env)
+	log.Printf("started... (%s)\n", config.Env)
 
 	listener, _ := net.Listen("tcp", ":4001")
 	if config.Env == "testing" {
