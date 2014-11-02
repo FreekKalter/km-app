@@ -13,16 +13,15 @@ import (
 
 func main() {
 	// Load config
-	configFile, err := ioutil.ReadFile("config.yml")
+	config, err := parseConfig("config.yml")
 	if err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
-	var config km.Config
-	err = goyaml.Unmarshal(configFile, &config)
+
+	s, err := km.NewServer("km", config)
 	if err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
-	s := km.NewServer("km", config)
 	defer s.Dbmap.Db.Close()
 
 	http.Handle("/", s)
@@ -35,4 +34,17 @@ func main() {
 		http.Serve(listener, nil)
 		//fcgi.Serve(listener, nil)
 	}
+}
+
+//TODO:test this function
+func parseConfig(filename string) (config km.Config, err error) {
+	configFile, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	err = goyaml.Unmarshal(configFile, &config)
+	if err != nil {
+		return
+	}
+	return
 }
