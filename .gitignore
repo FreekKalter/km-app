@@ -1,17 +1,17 @@
-app/km
-log
-postgresdata
+# build files
 *.pyc
 *.cidfile
-app/js/combined*
-app/config.yml
-gen
-app/app.test
+
+# logging
+log
 backup.sql
 backup.log
-app/js/*master*
-app/js/*combined*
-app/css/*master*
-nginx/static/*
-*.min.css
+
+# generated content
 Dockerfile
+config.yml
+gen
+nginx/static/*
+
+# misc
+postgresdata
