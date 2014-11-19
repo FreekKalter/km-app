@@ -25,7 +25,6 @@ EXPOSE 443
 RUN rm /etc/nginx/nginx.conf
 ADD default /etc/nginx/sites-available/default
 ADD client_auth.conf /etc/nginx/client_auth.conf
-ADD static /static
 
 # install confd
 WORKDIR /usr/local/bin
