@@ -2,7 +2,6 @@ FROM ubuntu:13.10
 MAINTAINER freek@kalteronline.org
 
 EXPOSE 5432
-EXPOSE 4001
 
 # Update OS.
 RUN echo "deb http://archive.ubuntu.com/ubuntu saucy main" > /etc/apt/sources.list
@@ -37,6 +36,7 @@ RUN chmod +x /backup.sh
 ADD restore.sh /restore.sh
 RUN chmod +x /restore.sh
 
-# configure supervisord
-RUN mkdir -p /var/log/supervisor
-ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+ADD start_postgres.sh /start_postgres.sh
+RUN chmod +x /start_postgres.sh
+
+CMD /start_postgres.sh
