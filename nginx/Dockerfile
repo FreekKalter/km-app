@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y nginx
 
 EXPOSE 443
 
+ADD static /static
+
 # Move all configs in the right locations
 RUN rm /etc/nginx/nginx.conf
 ADD default /etc/nginx/sites-available/default
