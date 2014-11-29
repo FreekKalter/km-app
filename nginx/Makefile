@@ -49,6 +49,5 @@ static/js/master.js: static/js/angular-combined.anno.min.js
 .PHONY: clean
 clean:
 	rm -f $(CSS_MINIFIED)
-	rm -f static/km
 	rm -f static/js/angular-combined*
 	rm -f static/js/master.js
