@@ -1,5 +1,6 @@
 from fabric.api import *
 import re
+import time
 
 env.ssh_config_path = '~/.ssh/config'
 env.use_ssh_config = True
@@ -28,6 +29,10 @@ def deploy_postgres():
     # else:
     #     new_port = '5432'
     port = '5432'
+    run('fleetctl stop postgres@{}.service'.format(port))
+    run('fleetctl stop postgres-discovery@{}.service'.format(port))
+    time.sleep(60) # make sure postgres has shutdown gracefully
+
     run('fleetctl destroy postgres@{}.service'.format(port))
     run('fleetctl destroy postgres-discovery@{}.service'.format(port))
 
