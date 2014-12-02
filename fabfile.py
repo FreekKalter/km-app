@@ -31,7 +31,7 @@ def deploy_postgres():
     port = '5432'
     run('fleetctl stop postgres@{}.service'.format(port))
     run('fleetctl stop postgres-discovery@{}.service'.format(port))
-    time.sleep(60) # make sure postgres has shutdown gracefully
+    time.sleep(60)  # make sure postgres has shutdown gracefully
 
     run('fleetctl destroy postgres@{}.service'.format(port))
     run('fleetctl destroy postgres-discovery@{}.service'.format(port))
@@ -64,3 +64,26 @@ def deploy_km():
 
     run('fleetctl destroy km_webapp@{}.service'.format(port))
     run('fleetctl destroy km_webapp-discovery@{}.service'.format(port))
+
+
+# def backup_postgres():
+def getSqlDump(directory):
+    run('mkdir -p /home/core/backup')
+    run('docker run -v /home/core/backup:/backup:rw --env POSTGRESADDRESS={}\
+                    freekkalter/postgres_km /backup.sh'.format(get_postgres_address()[0]))
+    get('/home/core/backup/backup.sql', directory)
+
+
+def get_postgres_address():
+    servers = run('etcdctl ls /services/postgres')
+    serverlist = servers.split('\n')
+    address = run('etcdctl get {}'.format(serverlist[0]))
+    return (address.split(':'))
+
+
+def backup():
+    getSqlDump('.')
+    # tar file and move to folder with format backup-{date}.sql
+    local('mkdir -p ~/km-backup')
+    local("tar -czf ~/km-backup/backup_`date +%d-%m-%Y.tar.gz` ./backup.sql")
+    local("rm ./backup.sql")
