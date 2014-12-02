@@ -87,3 +87,14 @@ def backup():
     local('mkdir -p ~/km-backup')
     local("tar -czf ~/km-backup/backup_`date +%d-%m-%Y.tar.gz` ./backup.sql")
     local("rm ./backup.sql")
+
+
+def restore(backuparchive):
+    local("tar -C /tmp --overwrite -xzf " + backuparchive)
+
+    uploaded = put('/tmp/backup.sql', '/home/core/backup.sql')
+    if uploaded.failed:
+        print uploaded.failed + 'failed to upload'
+        return
+    run('docker run -v /home/core/backup:/backup:rw --env POSTGRESADDRESS={}\
+            freekkalter/postgres_km /restore.sh'.format(get_postgres_address()[0]))
