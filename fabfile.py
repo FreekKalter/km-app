@@ -2,8 +2,8 @@ from fabric.api import *
 import re
 import time
 
-env.ssh_config_path = '~/.ssh/config'
 env.use_ssh_config = True
+env.forward_agent = True
 env.hosts.extend(['core'])
 
 
